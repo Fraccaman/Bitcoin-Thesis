@@ -1,0 +1,39 @@
+{
+  "name": "bitcoin-thesis",
+  "version": "1.0.0",
+  "description": "Bitcoin-Thesis",
+  "main": "index.js",
+  "scripts": {
+    "compile": "babel --source-maps -d lib/ src/",
+    "lint": "eslint src/ --ignore-path .gitignore"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fraccaman/Bitcoin-Thesis.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Fraccaman/Bitcoin-Thesis/issues"
+  },
+  "homepage": "https://github.com/Fraccaman/Bitcoin-Thesis#readme",
+  "devDependencies": {
+    "babel-cli": "^6.24.0",
+    "babel-eslint": "^6.1.2",
+    "babel-plugin-transform-async-to-generator": "^6.22.0",
+    "babel-preset-env": "^1.3.2",
+    "babel-preset-es2015": "^6.24.0",
+    "babel-preset-es2017": "^6.22.0",
+    "babel-preset-stage-0": "^6.22.0",
+    "eslint": "^3.19.0"
+  },
+  "dependencies": {
+    "bluebird": "^3.5.0",
+    "command-line-args": "^4.0.2",
+    "fast-async": "^6.2.2",
+    "find-remove": "^1.0.1",
+    "install": "^0.8.8",
+    "loadash": "0.0.1",
+    "redis": "^2.7.1"
+  }
+}
