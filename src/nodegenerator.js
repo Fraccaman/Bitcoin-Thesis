@@ -49,6 +49,10 @@ let client = redis.createClient()
 
 var result = rm(home + '/Network', {dir: "*", files: "*.*"})
 
+// Delete redis entries
+
+client.flushdb(function (err, succeeded) {});
+
 // Start building the enviroment
 
 if(!fs.existsSync(home + '/Network'))
@@ -69,6 +73,7 @@ function createNode(home, name, options, node) {
         fs.mkdirSync(home + '/Network/Nodes/' + name)
         fs.closeSync(fs.openSync(home + '/Network/Nodes/' + name + "/bitcoin.conf", 'w'));
         createConfig(home + '/Network/Nodes/' + name + "/bitcoin.conf", name, options, node)
+        resolve('Nodes ' + name + " created.")
     });
 }
 
