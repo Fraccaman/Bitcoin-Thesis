@@ -4,7 +4,7 @@
   "description": "Bitcoin-Thesis",
   "main": "index.js",
   "scripts": {
-    "ex": "chmod u+x src/nodegenerator.js; cd src; ./nodegenerator.js",
+    "ex": "chmod u+x src/nodegenerator.js; chmod u+x src/commandandcontrol.js;",
     "cmp": "chmod u+x src/nodegenerator.js; cd src"
   },
   "repository": {
@@ -21,7 +21,9 @@
     "bluebird": "^3.5.0",
     "caporal": "^0.4.1",
     "find-remove": "^1.0.1",
+    "js-weighted-list": "^0.1.1",
     "lodash": "^4.17.4",
+    "pshell": "^1.1.0",
     "redis": "^2.7.1"
   }
 }

@@ -11,36 +11,6 @@ const rm = require('find-remove')
 // get the HOME path of the machine
 const home = os.homedir()
 
-const optionDefinitions = [{
-    name: 'nodes',
-    type: Number,
-    alias: 'n'
-  },
-  {
-    name: 'port',
-    type: Number,
-    alias: 'p'
-  },
-  {
-    name: 'log',
-    type: Boolean,
-    alias: 'l',
-    defaultOption: true
-  },
-  {
-    name: 'rpcuser',
-    type: String
-  },
-  {
-    name: 'rpcpassword',
-    type: String
-  },
-  {
-    name: 'rpcport',
-    type: Number
-  }
-]
-
 const nodeDefinitions = {
   connect: "",
   bind: "127.0.0.1",
@@ -57,6 +27,7 @@ const nodeDefinitions = {
   rpcport: "",
   rpcallowip: "127.0.0.1",
   txindex: "1"
+  prune: 550
 }
 
 prog
@@ -67,8 +38,12 @@ prog
   .argument('<nodes>', 'Number of nodes', prog.INT)
   .argument('<port>', 'Starting port', prog.INT)
   .argument('<rpcport>', 'Starting RPC port', prog.INT)
+  .argument('<masterip>', 'RPC ip of master node')
+  .argument('<rpcmasterport>', 'RPC port of master node', prog.INT)
   .argument('[rpcuser]', 'RPC user (default: root)', /^[a-zA-Z0-9]*$/, 'root')
   .argument('[rpcpassword]', 'RPC password (default: root)', /^[a-zA-Z0-9]*$/, 'root')
+  .argument('[masteruser]', 'RPC username of the master node', /^[a-zA-Z0-9]*$/, 'root')
+  .argument('[masterpassword]', 'RPC password of the master node', /^[a-zA-Z0-9]*$/, 'root')
   .action(function(args, options, logger) {
 
     let client = redis.createClient()
@@ -81,6 +56,12 @@ prog
     })
 
     client.flushdb(function(err, succeeded) {});
+
+    client.set('master', JSON.stringify({
+      rpcport: (args['rpcmasterport']),
+      username: (args['masteruser']),
+      rpcport: (args['masterpassword'])
+    }));
 
     logger.info("Deleting all the entries in redis db ...");
 
