@@ -139,7 +139,7 @@ prog
       })
       .catch(res => console.log(res))
   })
-  command('sendtx', 'Send a transaction via RPC from a node by ID')
+  .command('sendtx', 'Send a transaction via RPC from a node by ID')
   .argument('<node>', 'Node ID', prog.INT)
   .argument('<hex>', 'Transaction hex format')
   .action(function(args, options, logger) {
