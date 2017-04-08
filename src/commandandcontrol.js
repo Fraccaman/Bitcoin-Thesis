@@ -95,7 +95,7 @@ prog
           })
           .then(res => {
             client.quit();
-            console.log('Node ' + args['node'] + ' is running in background');
+            console.log('Node ' + args['node'] + ' has been stopped.');
           })
           .catch(err => {
             console.error('Err: ', err);
@@ -109,7 +109,7 @@ prog
       Promise.all(keys.map(key => client.getAsync(key)))
         .then(values => {
           for (var i = 0; i < values.length; i++) {
-            console.log('Node ' + i + ': ' + JSON.stringify(JSON.parse(values[i], null, 2)));
+            console.log('Node ' + i + ': ' + JSON.stringify(JSON.parse(values[i]), null, 2));
           }
         })
         .then(function() {
@@ -118,24 +118,27 @@ prog
         .catch(err => console.log(err))
     })
   })
-  .command('command', 'Send a command via RPC to a node by ID')
+  .command('command', 'Send a command via RPC to a node by ID (use txsend to send transactions)')
   .argument('<node>', 'Node id to start', prog.INT)
   .argument('<op>', 'Command to run on node <node>')
   .argument('[params...]', 'Parameters for <op>')
   .action(function(args, options, logger) {
     getNodeInfo(client, args['node'])
       .then(res => {
-        run(JSON.parse(res)['bitcoincli'] + ' ' + args['op'] + ' ' + (args[0] ? args[0] : ''), {
-            echoCommand: false,
-            captureOutput: true
-          })
-          .then(res => {
-            logger.info(JSON.stringify(res.stdout.trim()));
-            client.quit()
-          })
-          .catch(err => {
-            logger.error(err.message)
-          })
+        if(args['op'] === 'sendrawtransaction') {
+          logger.info(JSON.parse(res)['bitcoincli'] + ' ' + args['op'] + ' ' + (args['params'][0] ? args['params'][0] : ''));
+          run(JSON.parse(res)['bitcoincli'] + ' ' + args['op'] + ' ' + (args['params'][0] ? args['params'][0] : ''), {
+              echoCommand: false,
+              captureOutput: true
+            })
+            .then(res => {
+              logger.info(res.stdout.trim());
+              client.quit()
+            })
+            .catch(err => {
+              logger.error(err.message)
+            })
+          }
       })
       .catch(res => console.log(res))
   })
@@ -145,6 +148,9 @@ prog
   .action(function(args, options, logger) {
     getNodeInfo(client, args['node'])
       .then(res => {
+        // TODO: take transaction by master node
+        // TODO: keep track of next transactions
+        // TODO: send block to miner (compute merkle root, compute double sha256)
         run(JSON.parse(res)['bitcoincli'] + ' ' + 'sendrawtransaction' + ' ' + args['hex'], {
             echoCommand: false,
             captureOutput: true

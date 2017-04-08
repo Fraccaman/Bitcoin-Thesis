@@ -24,6 +24,7 @@
     "js-weighted-list": "^0.1.1",
     "lodash": "^4.17.4",
     "pshell": "^1.1.0",
-    "redis": "^2.7.1"
+    "redis": "^2.7.1",
+    "sqlite3": "^3.1.8"
   }
 }
