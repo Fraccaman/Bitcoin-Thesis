@@ -3,142 +3,131 @@
 const prog = require('caporal')
 const bluebird = require('bluebird')
 const _ = require('lodash')
-const redis = require('redis')
 const run = require('pshell')
+const sqlite3 = require('sqlite3').verbose()
+const WeightedList = require('js-weighted-list')
 
-bluebird.promisifyAll(redis.RedisClient.prototype);
-bluebird.promisifyAll(redis.Multi.prototype);
-
-let client = redis.createClient()
-let node;
-let count = 0;
+let db = new sqlite3.cached.Database('nodes.sqlite')
 
 prog
   .version('1.0.0')
-  // you specify arguments using .argument()
-  // 'app' is required, 'env' is optional
   .command('startall', 'Start the entire network')
   .action(function(args, options, logger) {
-    client.keys('*', function(err, keys) {
-      Promise.all(keys.map(key => client.getAsync(key)))
-        .then(values => {
-          for (var i = 0; i < values.length; i++) {
-            run(JSON.parse(values[i])['bitcoind'], {
-                echoCommand: false,
-                captureOutput: true
-              })
-              .then(res => {
-                logger.info('Node is running in background.')
-              })
-              .catch(err => {
-                logger.error('Err: ' + err)
-              })
-          }
+    getAllNodes()
+      .then(res => {
+        res.forEach(function(value) {
+          run(value['bitcoind'], {
+              echoCommand: false,
+              captureOutput: true
+            })
+            .catch(err => {
+              logger.error('Err: ' + err)
+            })
         })
-        .then(function() {
-          client.quit();
-        })
-        .catch(err => console.log(err))
-    })
+        logger.info(res.length + ' are running in background.')
+        db.close()
+      })
+      .catch(err => {
+        console.log('Err: ' + err)
+        db.close()
+      })
   })
   .command('start', 'Start a single node')
   .argument('<node>', 'Node id to start', prog.INT)
   .action(function(args, options, logger) {
-    getNodeInfo(client, args['node'])
+    getNodeInfo(args['node'])
       .then(res => {
-        run(JSON.parse(res)['bitcoind'], {
+        run(res['bitcoind'], {
             echoCommand: false,
             captureOutput: true
           })
           .then(res => {
-            client.quit();
-            console.log('Node ' + args['node'] + ' is running in background');
+            logger.info('Node ' + args['node'] + ' is running in background.');
+            db.close()
           })
           .catch(err => {
-            console.error('Err: ', err);
+            logger.info('Err: ', err);
+            db.close()
           })
       })
-      .catch(res => console.log(res))
   })
-  .command('shutdownall', 'Stop the entire network')
+  .command('stopall', 'Stop the entire network')
   .action(function(args, options, logger) {
-    client.keys('*', function(err, keys) {
-      Promise.all(keys.map(key => client.getAsync(key)))
-        .then(values => {
-          for (var i = 0; i < values.length; i++) {
-            run(JSON.parse(values[i])['bitcoincli'] + ' stop', {
-                echoCommand: false,
-                captureOutput: true
-              })
-              .then(res => {
-                logger.info('Node has been stopped')
-              })
-              .catch(err => {
-                logger.error('Err: ' + err)
-              })
-          }
+    getAllNodes()
+      .then(res => {
+        res.forEach(function(value) {
+          run(value['bitcoincli'] + ' stop', {
+              echoCommand: false,
+              captureOutput: true
+            })
+            .catch(err => {
+              logger.error('Err: ' + err)
+            })
         })
-        .then(function() {
-          client.quit();
-        })
-        .catch(err => console.log(err))
-    })
+        logger.info(res.length + ' have been stopped.')
+        db.close()
+      })
+      .catch(err => {
+        console.log('Err: ' + err)
+        db.close()
+      })
   })
-  .command('shutdown', 'Stop a single node')
+  .command('stop', 'Stop a single node')
   .argument('<node>', 'Node id to start', prog.INT)
   .action(function(args, options, logger) {
-    getNodeInfo(client, args['node'])
+    getNodeInfo(args['node'])
       .then(res => {
-        run(JSON.parse(res)['bitcoincli'] + ' stop', {
+        run(res['bitcoincli'] + ' stop', {
             echoCommand: false,
             captureOutput: true
           })
           .then(res => {
-            client.quit();
-            console.log('Node ' + args['node'] + ' has been stopped.');
+            logger.info('Node ' + args['node'] + ' has been stopped.');
           })
           .catch(err => {
-            console.error('Err: ', err);
+            logger.info('Err: ', err);
           })
       })
-      .catch(res => console.log(res))
   })
   .command('showall', 'Pretty print all nodes info in the network')
   .action(function(args, options, logger) {
-    client.keys('*', function(err, keys) {
-      Promise.all(keys.map(key => client.getAsync(key)))
-        .then(values => {
-          for (var i = 0; i < values.length; i++) {
-            console.log('Node ' + i + ': ' + JSON.stringify(JSON.parse(values[i]), null, 2));
-          }
+    getAllNodes()
+      .then(res => {
+        res.forEach(function(value) {
+          console.log(res, null, 2);
         })
-        .then(function() {
-          client.quit();
-        })
-        .catch(err => console.log(err))
-    })
+        db.close()
+      })
+      .catch(err => {
+        console.log('Err: ' + err)
+        db.close()
+      })
   })
   .command('command', 'Send a command via RPC to a node by ID (use txsend to send transactions)')
   .argument('<node>', 'Node id to start', prog.INT)
   .argument('<op>', 'Command to run on node <node>')
   .argument('[params...]', 'Parameters for <op>')
   .action(function(args, options, logger) {
-    getNodeInfo(client, args['node'])
+    getNodeInfo(args['node'])
       .then(res => {
-        if(args['op'] === 'sendrawtransaction') {
-          logger.info(JSON.parse(res)['bitcoincli'] + ' ' + args['op'] + ' ' + (args['params'][0] ? args['params'][0] : ''));
-          run(JSON.parse(res)['bitcoincli'] + ' ' + args['op'] + ' ' + (args['params'][0] ? args['params'][0] : ''), {
+        if (args['op'] !== 'sendrawtransaction') {
+          console.log("DEBUG " + res['bitcoincli'] + ' ' + args['op'] + ' ' + args['params'].join(' '));
+          run(res['bitcoincli'] + ' ' + args['op'] + ' ' + args['params'].join(' '), {
               echoCommand: false,
               captureOutput: true
             })
             .then(res => {
               logger.info(res.stdout.trim());
-              client.quit()
+              db.close()
             })
             .catch(err => {
               logger.error(err.message)
+              db.close()
             })
-          }
+        } else {
+          console.log('Send transactions with [sendtx] and blocks with [sendblock] commands.');
+          db.close()
+        }
       })
       .catch(res => console.log(res))
   })
@@ -146,18 +135,14 @@ prog
   .argument('<node>', 'Node ID', prog.INT)
   .argument('<hex>', 'Transaction hex format')
   .action(function(args, options, logger) {
-    getNodeInfo(client, args['node'])
+    getNodeInfo(args['node'])
       .then(res => {
-        // TODO: take transaction by master node
-        // TODO: keep track of next transactions
-        // TODO: send block to miner (compute merkle root, compute double sha256)
-        run(JSON.parse(res)['bitcoincli'] + ' ' + 'sendrawtransaction' + ' ' + args['hex'], {
+        run(res['bitcoincli'] + ' ' + 'sendrawtransaction' + ' ' + args['hex'], {
             echoCommand: false,
             captureOutput: true
           })
           .then(res => {
             logger.info(JSON.stringify(res.stdout.trim()));
-            client.quit()
           })
           .catch(err => {
             logger.error(err.message)
@@ -165,12 +150,51 @@ prog
       })
       .catch(res => console.log(res))
   })
+  .command('mine', 'Mine and submit a block using the transaction in the mempool.')
+  .argument('[node]', 'Node ID', prog.INT)
+  .action(function(args, options, logger) {
+    getAllNodes()
+      .then(res => {
+        const data = res.map(function(item) {
+          return [item['id'], item['probability']]
+        })
+        let wl = new WeightedList(data)
+        const nextNode = wl.peek()
+        getNodeInfo(args['node'] || nextNode[0])
+          .then(res => {
+            // console.log('python src/ntgbtminer.py ' + res['rpcport'] + ' ' + res['rpcusername'] + ' ' + res['rpcpassword']);
+            // run('python src/ntgbtminer.py ' + res['rpcport'] + ' ' + res['rpcusername'] + ' ' + res['rpcpassword'], {
+            run('python src/ntgbtminer.py ' + 16593 + ' ' + 'root' + ' ' + 'root', {
+                echoCommand: false,
+                captureOutput: true
+              })
+              .then(res => {
+                logger.info(res.stdout.trim());
+              })
+              .catch(err => {
+                logger.error(err.message)
+              })
+          })
+      })
+      .catch(res => console.log(res))
+  })
 
-function getNodeInfo(client, node) {
+function getAllNodes() {
   return new Promise(function(resolve, reject) {
-    client.get(node, function(err, value) {
-      if (err) return reject(err)
-      resolve(value)
+    db.all('SELECT * FROM Node', function(err, res) {
+      if (err)
+        return reject(err)
+      resolve(res)
+    })
+  })
+}
+
+function getNodeInfo(node) {
+  return new Promise(function(resolve, reject) {
+    db.get('SELECT * FROM Node WHERE id = ?', [node], function(err, row) {
+      if (err)
+        return reject(err)
+      resolve(row)
     })
   })
 }
