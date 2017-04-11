@@ -31,4 +31,4 @@ node_modules
 lib/**
 
 #database file
-nodes_sqlite
+*.sqlite
