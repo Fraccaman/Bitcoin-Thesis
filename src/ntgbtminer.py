@@ -29,7 +29,6 @@ RPC_PASS    = "root"
 ################################################################################
 
 def rpc(method, params=None):
-
     rpc_id = random.getrandbits(32)
 
     callstr = json.dumps({"id": rpc_id, "method": method, "params": params})
@@ -42,6 +41,7 @@ def rpc(method, params=None):
     try:
       f = urllib2.urlopen(request)
     except ValueError:
+      response = json.loads(f.read())
     response = json.loads(f.read())
 
     if response['id'] != rpc_id:
@@ -420,16 +420,20 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
 # Standalone Bitcoin Miner, Single-threaded
 ################################################################################
 
-def standalone_miner(coinbase_message, address, height):
+def standalone_miner(coinbase_message, address):
     # while True:
-    if len(sys.argv) != 4:
-        print('Args must be 4')
+    if len(sys.argv) < 3:
+        print('Args must be 3')
         sys.exit(0)
 
+    global RPC_URL
     RPC_URL = "http://127.0.0.1:" + sys.argv[1]
+    global RPC_USER
     RPC_USER = sys.argv[2]
+    global RPC_PASS
     RPC_PASS = sys.argv[3]
-    height = sys.argv[4]
+
+    print(rpc_getblocktemplate())
 
     print("Mining new block template...")
     mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, timeout=60)

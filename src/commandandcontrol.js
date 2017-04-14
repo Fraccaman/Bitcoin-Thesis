@@ -6,165 +6,243 @@ const _ = require('lodash')
 const run = require('pshell')
 const sqlite3 = require('sqlite3').verbose()
 const WeightedList = require('js-weighted-list')
+const prettyjson = require('prettyjson')
+const axios = require('axios')
+const crypto = require('crypto')
 
 let db = new sqlite3.cached.Database('nodes.sqlite')
+let node;
 
 prog
   .version('1.0.0')
+
+  /**
+   * Command to start all non-running nodes
+   */
+
   .command('startall', 'Start the entire network')
+  .option('--reindex', 'Reindex the chain', prog.BOOL, false)
   .action(function(args, options, logger) {
-    getAllNodes()
+    getAllDisabledNodeInfo()
       .then(res => {
-        res.forEach(function(value) {
-          run(value['bitcoind'], {
+        res.forEach(value => {
+          run(value.bitcoind + options.reindex ? ' --reindex' : '', {
               echoCommand: false,
               captureOutput: true
+            })
+            .then(_ => {
+              turnNodeOnOff(value.id, 1)
+              console.log('Node ' + value.id + ' is running in background.')
             })
             .catch(err => {
               logger.error('Err: ' + err)
             })
         })
-        logger.info(res.length + ' are running in background.')
-        db.close()
       })
       .catch(err => {
         console.log('Err: ' + err)
         db.close()
       })
   })
+
+  /**
+   * Command to start a node by giving his ID
+   */
+
   .command('start', 'Start a single node')
   .argument('<node>', 'Node id to start', prog.INT)
+  .option('--reindex', 'Reindex the chain', prog.BOOL, false)
   .action(function(args, options, logger) {
-    getNodeInfo(args['node'])
+    getNodeInfo(args.node)
       .then(res => {
-        run(res['bitcoind'], {
+        run(res.bitcoind + (options.reindex ? ' --reindex' : ''), {
             echoCommand: false,
             captureOutput: true
           })
           .then(res => {
+            turnNodeOnOff(res.id, 1)
             logger.info('Node ' + args['node'] + ' is running in background.');
-            db.close()
           })
           .catch(err => {
             logger.info('Err: ', err);
-            db.close()
           })
       })
   })
+
+  /**
+   * Command to stop all running nodes.
+   */
+
   .command('stopall', 'Stop the entire network')
   .action(function(args, options, logger) {
-    getAllNodes()
+    getAllActiveNodeInfo()
       .then(res => {
-        res.forEach(function(value) {
-          run(value['bitcoincli'] + ' stop', {
-              echoCommand: false,
-              captureOutput: true
+        res.forEach(client => {
+          sendRpcRequest('127.0.0.1', client.rpcport, client.rpcusername, client.rpcpassword, 'stop')
+            .then(res => {
+              turnNodeOnOff(client.id, 0)
+              console.log('Node ' + client.id + ': ' + res.data.result);
             })
             .catch(err => {
-              logger.error('Err: ' + err)
+              console.log('Error: ' + err.code);
             })
         })
-        logger.info(res.length + ' have been stopped.')
-        db.close()
       })
       .catch(err => {
         console.log('Err: ' + err)
         db.close()
       })
   })
+
+  /**
+   * Command to stop a running node by ID.
+   */
+
   .command('stop', 'Stop a single node')
-  .argument('<node>', 'Node id to start', prog.INT)
+  .argument('<node>', 'Node id to stop', prog.INT)
   .action(function(args, options, logger) {
-    getNodeInfo(args['node'])
-      .then(res => {
-        run(res['bitcoincli'] + ' stop', {
-            echoCommand: false,
-            captureOutput: true
-          })
+    getNodeInfo(args.node)
+      .then(client => {
+        sendRpcRequest('127.0.0.1', client.rpcport, client.rpcusername, client.rpcpassword, 'stop')
           .then(res => {
-            logger.info('Node ' + args['node'] + ' has been stopped.');
+            turnNodeOnOff(client.id, 0)
+            console.log('Node ' + client.id + ': ' + res.data.result);
           })
           .catch(err => {
-            logger.info('Err: ', err);
+            console.log('Error: ' + err);
           })
       })
   })
+
+  /**
+   * Command to show all nodes in the network.
+   * @param {active} --active - Display only running nodes.
+   */
+
   .command('showall', 'Pretty print all nodes info in the network')
+  .option('--active', 'Show only running node in the network', prog.BOOL, false)
   .action(function(args, options, logger) {
-    getAllNodes()
-      .then(res => {
-        res.forEach(function(value) {
-          console.log(res, null, 2);
+    if (!options.active) {
+      getAllNodes()
+        .then(res => {
+          console.log(prettyjson.render({
+            'Number of nodes': res.length
+          }, {
+            noColor: false
+          }));
+          console.log("-------------------------------------------");
+          res.forEach(value => {
+            delete value['bitcoind']
+            delete value['bitcoincli']
+            console.log(prettyjson.render(value, {
+              noColor: false
+            }));
+            console.log("-------------------------------------------");
+          })
+          db.close()
         })
-        db.close()
-      })
-      .catch(err => {
-        console.log('Err: ' + err)
-        db.close()
-      })
+        .catch(err => {
+          console.log('Err: ' + err)
+          db.close()
+        })
+    } else {
+      getAllActiveNodeInfo()
+        .then(res => {
+          if (res == undefined) {
+            console.log("There are no active nodes.");
+            return
+          }
+          console.log(prettyjson.render({
+            'Number of active nodes': res.length
+          }, {
+            noColor: false
+          }));
+          console.log("-------------------------------------------");
+          res.forEach(function(value) {
+            delete value['bitcoind']
+            delete value['bitcoincli']
+            console.log(prettyjson.render(value, {
+              noColor: false
+            }));
+            console.log("-------------------------------------------");
+          })
+          db.close()
+        })
+        .catch(err => {
+          console.log('Err: ' + err)
+          db.close()
+        })
+    }
   })
-  .command('command', 'Send a command via RPC to a node by ID (use txsend to send transactions)')
-  .argument('<node>', 'Node id to start', prog.INT)
-  .argument('<op>', 'Command to run on node <node>')
+
+  /**
+   * Iteract with a node seding commands.
+   * @param {Int} node - the ID of the node receiving the command
+   * @param {op} command - the command to be executed on the node
+   * @param {params} paramters - optional paramters
+   */
+
+  .command('command', 'Send a command via RPC to a node by ID (use sendtx / sendblk to send transactions / blocks)')
+  .argument('<node>', 'Node id that receive the command', prog.INT)
+  .argument('<op>', 'Command to run on node <node>', /^((?!sendrawtransaction).)*$/)
   .argument('[params...]', 'Parameters for <op>')
   .action(function(args, options, logger) {
-    getNodeInfo(args['node'])
-      .then(res => {
-        if (args['op'] !== 'sendrawtransaction') {
-          console.log("DEBUG " + res['bitcoincli'] + ' ' + args['op'] + ' ' + args['params'].join(' '));
-          run(res['bitcoincli'] + ' ' + args['op'] + ' ' + args['params'].join(' '), {
-              echoCommand: false,
-              captureOutput: true
-            })
-            .then(res => {
-              logger.info(res.stdout.trim());
-              db.close()
-            })
-            .catch(err => {
-              logger.error(err.message)
-              db.close()
-            })
-        } else {
-          console.log('Send transactions with [sendtx] and blocks with [sendblock] commands.');
-          db.close()
-        }
+    getNodeInfo(args.node)
+      .then(client => {
+        sendRpcRequest('127.0.0.1', client.rpcport, client.rpcusername, client.rpcpassword, args.op, args.params)
+          .then(res => {
+            // console.log(prettyjson.render(res.data.result));
+            console.log(res.data.result);
+          })
+          .catch(err => {
+            console.log('Error: ' + err);
+          })
       })
       .catch(res => console.log(res))
   })
+
+  /**
+   * Iteract with a node to send a transaction.
+   * @param {Int} node - the ID of the node receiving the command
+   * @param {string} hex - the HEX encoded string of the transaction
+   */
+
   .command('sendtx', 'Send a transaction via RPC from a node by ID')
   .argument('<node>', 'Node ID', prog.INT)
   .argument('<hex>', 'Transaction hex format')
   .action(function(args, options, logger) {
-    getNodeInfo(args['node'])
+    getNodeInfo(args.node)
       .then(res => {
-        run(res['bitcoincli'] + ' ' + 'sendrawtransaction' + ' ' + args['hex'], {
-            echoCommand: false,
-            captureOutput: true
-          })
+        sendRpcRequest('127.0.0.1', res.rpcport, res.rpcusername, res.rpcpassword, 'sendrawtransaction', args.hex)
           .then(res => {
-            logger.info(JSON.stringify(res.stdout.trim()));
+            console.log(prettyjson.render(res.data.result));
           })
           .catch(err => {
-            logger.error(err.message)
+            console.log('Error: ' + err);
           })
       })
       .catch(res => console.log(res))
   })
-  .command('mine', 'Mine and submit a block using the transaction in the mempool.')
+
+  /**
+   * Send a command to mine the next block.
+   * @param {Int} node - optional paramter to choose the node that will mine the block
+   */
+
+  .command('mine', 'Mine and submit a block. If [node] is empty a random node will be choosen based on a weighted probability.')
   .argument('[node]', 'Node ID', prog.INT)
   .action(function(args, options, logger) {
     getAllNodes()
       .then(res => {
         const data = res.map(function(item) {
-          return [item['id'], item['probability']]
+          return [item.id, item.probability]
         })
         let wl = new WeightedList(data)
         const nextNode = wl.peek()
-        getNodeInfo(args['node'] || nextNode[0])
+        // TODO: add probability that a orphan block is generated
+        getNodeInfo(args.node || nextNode[0])
           .then(res => {
-            // console.log('python src/ntgbtminer.py ' + res['rpcport'] + ' ' + res['rpcusername'] + ' ' + res['rpcpassword']);
-            // run('python src/ntgbtminer.py ' + res['rpcport'] + ' ' + res['rpcusername'] + ' ' + res['rpcpassword'], {
-            run('python src/ntgbtminer.py ' + 16593 + ' ' + 'root' + ' ' + 'root', {
+            run('python src/ntgbtminer.py ' + res.rpcport + ' ' + 'root' + ' ' + 'root', {
                 echoCommand: false,
                 captureOutput: true
               })
@@ -179,6 +257,7 @@ prog
       .catch(res => console.log(res))
   })
 
+// Return all the nodes in the network
 function getAllNodes() {
   return new Promise(function(resolve, reject) {
     db.all('SELECT * FROM Node', function(err, res) {
@@ -189,6 +268,7 @@ function getAllNodes() {
   })
 }
 
+// Return a single node by ID
 function getNodeInfo(node) {
   return new Promise(function(resolve, reject) {
     db.get('SELECT * FROM Node WHERE id = ?', [node], function(err, row) {
@@ -196,6 +276,86 @@ function getNodeInfo(node) {
         return reject(err)
       resolve(row)
     })
+  })
+}
+
+// Return all the running nodes
+function getAllActiveNodeInfo() {
+  return new Promise(function(resolve, reject) {
+    db.all('SELECT * FROM Node WHERE active = 1', function(err, rows) {
+      if (err)
+        return reject(err)
+      resolve(rows)
+    })
+  })
+}
+
+
+// Return all the disabled nodes
+function getAllDisabledNodeInfo() {
+  return new Promise(function(resolve, reject) {
+    db.all('SELECT * FROM Node WHERE active = 0', function(err, rows) {
+      if (err)
+        return reject(err)
+      resolve(rows)
+    })
+  })
+}
+
+// Set a node proriety as running / shutdown
+function turnNodeOnOff(node, status) {
+  return new Promise(function(resolve, reject) {
+    db.get('UPDATE Node SET active = ? WHERE id = ?', [status, node], function(err, rows) {
+      if (err)
+        return reject(err)
+      resolve(rows)
+    })
+  })
+}
+
+// generate a random value
+function randomValueHex(len) {
+  return crypto.randomBytes(Math.ceil(len / 2))
+    .toString('hex')
+    .slice(0, len)
+}
+
+// return a flatten array where number are casted to Num
+function normalizeParams(params) {
+  return params[0] != undefined && params[0].length > 0
+    ? params.reduce(function iter(r, a) {
+      if (!isNaN(a)) {
+        return r.concat(parseInt(a));
+      }
+      return r.concat(a);
+    }, [])
+    : []
+}
+
+function sendRpcRequest(ip, port, user, password, method, ...params) {
+  return new Promise(function(resolve, reject) {
+    axios({
+        method: 'post',
+        url: 'http://' + ip + ':' + port,
+        headers: {
+          'content-type': 'text/plain'
+        },
+        data: {
+          jsonrpc: '1.0',
+          id: randomValueHex(2),
+          method: method,
+          params: normalizeParams(params)
+        },
+        auth: {
+          username: user,
+          password: password
+        }
+      })
+      .then(res => resolve(res))
+      .catch(err => {
+        console.log(err);
+        reject(err)
+      })
   })
 }
 

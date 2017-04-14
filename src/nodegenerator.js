@@ -7,7 +7,7 @@ const _ = require('lodash')
 const fs = bluebird.promisifyAll(require('fs'))
 var sqlite3 = require('sqlite3').verbose();
 const rm = require('find-remove')
-const isValidPath = require('is-valid-path');
+const isValidPath = require('is-valid-path')
 
 let db = new sqlite3.cached.Database('nodes.sqlite')
 let sum = 0;
@@ -65,7 +65,7 @@ prog
     db.serialize(function() {
       db.run("DROP TABLE IF EXISTS Node")
       db.run("DROP TABLE IF EXISTS Master")
-      db.run("CREATE TABLE Node (id INT, port INT, rpcusername VARCHAR(255), rpcpassword VARCHAR(255), rpcport INT, probability INT, bitcoind TEXT, bitcoincli TEXT)")
+      db.run("CREATE TABLE Node (id INT, port INT, rpcusername VARCHAR(255), rpcpassword VARCHAR(255), rpcport INT, probability INT, active INT, bitcoind TEXT, bitcoincli TEXT)")
       db.run("CREATE TABLE Master (id INT, ip VARCHAR(255), rpcusername VARCHAR(255), rpcpassword VARCHAR(255), rpcport INT)")
     })
 
@@ -73,7 +73,7 @@ prog
     stmt.run(1, args['masterip'], args['rpcmasteruser'], args['rpcmasterpassword'], args['rpcmasterport'])
     stmt.finalize()
 
-    logger.info("Deleting all the entries in redis db ...")
+    logger.info("Deleting all the entries in sqlite ...")
 
     if (!fs.existsSync(home + '/Network'))
       fs.mkdirSync(home + '/Network/')
@@ -128,18 +128,17 @@ function createConfig(path, id, options, node, probabilities) {
       writer.write('connect' + '=127.0.0.1:' + (options['port'] + i) + '\n')
   }
   const keys = Object.keys(probabilities)
-  let stmt = db.prepare("INSERT INTO Node VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-
+  let stmt = db.prepare("INSERT INTO Node VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
 
   if(keys.length > 0) {
     for (key of keys) {
       if (id >= key.split('..')[0] && id <= key.split('..')[1]) {
         sum += probabilities[key];
-        stmt.run(id, options['rpcport'] + id, options['rpcuser'], options['rpcpassword'], options['port'] + id, probabilities[key], "bitcoind -daemon -conf=$HOME/Network/Nodes/" + id + "/bitcoin.conf -datadir=$HOME/Network/Nodes/" + id + " -pid=$HOME/Network/Nodes/" + id + "/.pid -debug", "bitcoin-cli -rpcconnect=127.0.0.1 -rpcport=" + (options['rpcport'] + id) + " -rpcuser=" + options['rpcuser'] + " -rpcpassword=" + options['rpcpassword'])
+        stmt.run(id, options['port'] + id, options['rpcuser'], options['rpcpassword'], options['rpcport'] + id, probabilities[key], 0, "bitcoind -daemon -conf=$HOME/Network/Nodes/" + id + "/bitcoin.conf -datadir=$HOME/Network/Nodes/" + id + " -pid=$HOME/Network/Nodes/" + id + "/.pid -debug", "bitcoin-cli -rpcconnect=127.0.0.1 -rpcport=" + (options['rpcport'] + id) + " -rpcuser=" + options['rpcuser'] + " -rpcpassword=" + options['rpcpassword'])
       }
     }
   } else {
-    stmt.run(id, options['rpcport'] + id, options['rpcuser'], options['rpcpassword'], options['port'] + id, 1, "bitcoind -daemon -conf=$HOME/Network/Nodes/" + id + "/bitcoin.conf -datadir=$HOME/Network/Nodes/" + id + " -pid=$HOME/Network/Nodes/" + id + "/.pid -debug", "bitcoin-cli -rpcconnect=127.0.0.1 -rpcport=" + (options['rpcport'] + id) + " -rpcuser=" + options['rpcuser'] + " -rpcpassword=" + options['rpcpassword'])
+    stmt.run(id, options['port'] + id, options['rpcuser'], options['rpcpassword'], options['rpcport'] + id, 1, 0, "bitcoind -daemon -conf=$HOME/Network/Nodes/" + id + "/bitcoin.conf -datadir=$HOME/Network/Nodes/" + id + " -pid=$HOME/Network/Nodes/" + id + "/.pid -debug", "bitcoin-cli -rpcconnect=127.0.0.1 -rpcport=" + (options['rpcport'] + id) + " -rpcuser=" + options['rpcuser'] + " -rpcpassword=" + options['rpcpassword'])
   }
   stmt.finalize()
   writer.end()
