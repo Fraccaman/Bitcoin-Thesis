@@ -30,5 +30,8 @@ node_modules
 # Compiled output
 lib/**
 
-#database file
+# database file
 *.sqlite
+
+# data normalized to be plotted
+data.js
