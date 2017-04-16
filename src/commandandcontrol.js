@@ -250,12 +250,17 @@ prog
       getAllNodes()
         .then(res => {
           // get the next miner
+          let promises = []
           const weightedList = buildWeightedList(res)
           let nextMiner = getNextMiner(weightedList)
           console.log('Next miner: ' + nextMiner)
           // check if an orphan is generated
           const nOfOrphans = isOrphanGenerated()
-          console.log('N. of orphans: ' + nOfOrphans);
+          console.log('N. of orphans: ' + nOfOrphans)
+          for (var i = 0; i < nOfOrphans.length; i++) {
+            promises.push()
+          }
+
           run('python src/ntgbtminer.py ' + res[nextMiner].rpcport + ' ' + 'root' + ' ' + 'root', {
               echoCommand: false,
               captureOutput: true
@@ -384,13 +389,26 @@ function buildWeightedList(data) {
 }
 
 function getNextMiner(weightedList) {
-  return weightedList.peek()[0]
+  return weightedList.pop()[0]
 }
 
 function isOrphanGenerated() {
   probabilitiesOrphans = JSON.parse(require('fs').readFileSync('orphan.conf', 'utf8'))
   const wl = new WeightedList(Object.entries(probabilitiesOrphans))
   return wl.peek()[0]
+}
+
+function mineBlock(id, username, password) {
+  run('python src/ntgbtminer.py ' + id + ' ' + username + ' ' + password, {
+      echoCommand: false,
+      captureOutput: true
+    })
+    .then(res => {
+      logger.info(res.stdout.trim());
+    })
+    .catch(err => {
+      logger.error(err.message)
+    })
 }
 
 function sendRpcRequest(ip, port, user, password, method, ...params) {

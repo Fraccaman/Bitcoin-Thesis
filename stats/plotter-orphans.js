@@ -5,7 +5,7 @@ const sortBy = require('sort-by')
 const fs = require('fs');
 const _ = require('lodash')
 
-const path = 'data.json'
+const path = 'stats/data-orphans.json'
 
 fs.readFile(path, 'utf8', function(err, data) {
   if (err) throw err;
@@ -18,7 +18,24 @@ fs.readFile(path, 'utf8', function(err, data) {
     y: Object.keys(objGroupBy).map(item => objGroupBy[item].length),
     type: 'scatter'
   }
-  fs.writeFile("data.js", JSON.stringify(json), function(err) {
+
+  const index  =
+  `<head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  </head>
+
+  <body>
+
+    <div id="myDiv" style="width: 100%; height: 100%;">
+      <!-- Plotly chart will be drawn inside this DIV -->
+    </div>
+    <script>
+      var data = [${JSON.stringify(json)}]
+      Plotly.newPlot('myDiv', data);
+    </script>
+  </body>`
+
+  fs.writeFile("stats/index.html", index, function(err) {
     if (err) {
       return console.log(err);
     }

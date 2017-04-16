@@ -5,7 +5,7 @@ const fs = require('fs');
 const _ = require('lodash')
 const stats = require('simple-statistics')
 
-const path = 'data2.json'
+const path = 'stats/data-time-interval.json'
 
 fs.readFile(path, 'utf8', function(err, data) {
   if (err) throw err;
@@ -22,15 +22,19 @@ fs.readFile(path, 'utf8', function(err, data) {
   console.log('VARIANCE: ' + stats.variance(blocksTime));
   console.log('MAD: ' + stats.medianAbsoluteDeviation(blocksTime));
   console.log('SS: ' + stats.sampleSkewness(blocksTime));
-  // console.log('zSCORE: ' + stats.zScore(blocksTime));sampleSkewness
 
   // make a bunch of standard variates
   let test = []
   const n = 2000
 
+
+  // use medianAbsoluteDeviation instead of standard deviation
   for (i = 0; i < n; i++) {
-    test.push(marsagliaPolarMethod(stats.mean(blocksTime), stats.standardDeviation(blocksTime)));
+    test.push(marsagliaPolarMethod(stats.mean(blocksTime), stats.medianAbsoluteDeviation(blocksTime)));
   }
+
+  console.log('MIN-MPM: ' + stats.min(test));
+  console.log('MAX-MPM: ' + stats.max(test));
 
   test.sort(function(a, b) {
     return a - b
@@ -42,7 +46,23 @@ fs.readFile(path, 'utf8', function(err, data) {
     type: 'scatter'
   }
 
-  fs.writeFile("data2.js", JSON.stringify(json), function(err) {
+  const index  =
+  `<head>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  </head>
+
+  <body>
+
+    <div id="myDiv" style="width: 100%; height: 100%;">
+      <!-- Plotly chart will be drawn inside this DIV -->
+    </div>
+    <script>
+      var data = [${JSON.stringify(json)}]
+      Plotly.newPlot('myDiv', data);
+    </script>
+  </body>`
+
+  fs.writeFile("stats/index.html", index, function(err) {
     if (err) {
       return console.log(err);
     }
