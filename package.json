@@ -1,0 +1,40 @@
+{
+  "name": "bitcoin-framework",
+  "version": "0.0.1",
+  "description": "Bitcoin-Thesis",
+  "main": "index.js",
+  "scripts": {
+    "ex": "chmod u+x src/nodegenerator.js; chmod u+x src/commandandcontrol.js;",
+    "cmp": "chmod u+x src/nodegenerator.js; cd src"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Fraccaman/Bitcoin-Thesis.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Fraccaman/Bitcoin-Thesis/issues"
+  },
+  "homepage": "https://github.com/Fraccaman/Bitcoin-Thesis#readme",
+  "dependencies": {
+    "axios": "^0.16.1",
+    "aybabtu": "^1.1.5",
+    "bluebird": "^3.5.0",
+    "caporal": "^0.4.1",
+    "crypto": "^0.0.3",
+    "find-remove": "^1.0.1",
+    "install": "^0.8.8",
+    "is-valid-path": "^0.1.1",
+    "js-weighted-list": "^0.1.1",
+    "lodash": "^4.17.4",
+    "npm": "^4.5.0",
+    "plotly.js": "^1.25.2",
+    "prettyjson": "^1.2.1",
+    "pshell": "^1.1.0",
+    "redis": "^2.7.1",
+    "simple-statistics": "^3.0.0",
+    "sort-by": "^1.2.0",
+    "sqlite3": "^3.1.8"
+  }
+}
