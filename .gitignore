@@ -29,3 +29,13 @@ node_modules
 
 # Compiled output
 lib/**
+
+# database file
+*.sqlite
+
+# data normalized to be plotted
+data*.js
+
+
+# .txt files
+*.txt
