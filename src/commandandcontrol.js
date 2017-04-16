@@ -2,7 +2,6 @@
 
 const prog = require('caporal')
 const bluebird = require('bluebird')
-const _ = require('lodash')
 const run = require('pshell')
 const sqlite3 = require('sqlite3').verbose()
 const WeightedList = require('js-weighted-list')
@@ -235,75 +234,41 @@ prog
     if (args.node != undefined && args.node != null) {
       getNodeInfo(args.node)
         .then(res => {
-          run('python src/ntgbtminer.py ' + res.rpcport + ' ' + 'root' + ' ' + 'root', {
+          run('python src/ntgbtminer.py ' + res.rpcport + ' ' + res.rpcusername + ' ' + res.rpcpassword, {
               echoCommand: false,
               captureOutput: true
             })
             .then(res => {
-              logger.info(res.stdout.trim());
+              console.log(res.stdout.trim())
             })
             .catch(err => {
-              logger.error(err.message)
+              console.log(err.message)
             })
         })
     } else {
       getAllNodes()
         .then(res => {
           // get the next miner
-          let promises = []
+          let minerList = []
           const weightedList = buildWeightedList(res)
           let nextMiner = getNextMiner(weightedList)
+          // add miner to miner list
+          minerList.push(mineBlock(res[nextMiner].rpcport, res[nextMiner].rpcusername, res[nextMiner].rpcpassword))
           console.log('Next miner: ' + nextMiner)
           // check if an orphan is generated
           const nOfOrphans = isOrphanGenerated()
           console.log('N. of orphans: ' + nOfOrphans)
-          for (var i = 0; i < nOfOrphans.length; i++) {
-            promises.push()
+          for (var i = 0; i < nOfOrphans; i++) {
+            nextMiner = getNextMiner(weightedList)
+            console.log('Orphan Miner:' + nextMiner);
+            minerList.push(mineBlock(res[nextMiner].rpcport, res[nextMiner].rpcusername, res[nextMiner].rpcpassword))
           }
-
-          run('python src/ntgbtminer.py ' + res[nextMiner].rpcport + ' ' + 'root' + ' ' + 'root', {
-              echoCommand: false,
-              captureOutput: true
-            })
-            .then(res => {
-              logger.info(res.stdout.trim());
-            })
-            .catch(err => {
-              logger.error(err.message)
-            })
-          // let promises = []
-          // for(let i = 0; i < nOfOrphans; i++) {
-          //   promises.push()
-          // }
+          bluebird.all(minerList)
+            .then(res => console.log(res))
+            .catch(res => console.log(res))
         })
         .catch(err => console.log(err))
     }
-
-
-    // getAllNodes()
-    //   .then(res => {
-    //     const data = res.map(function(item) {
-    //       return [item.id, item.probability]
-    //     })
-    //
-    //     let wl = new WeightedList(data)
-    //     const nextNode = wl.peek()
-    //     // TODO: add probability that a orphan block is generated
-    //     getNodeInfo(args.node || nextNode[0])
-    //       .then(res => {
-    //         run('python src/ntgbtminer.py ' + res.rpcport + ' ' + 'root' + ' ' + 'root', {
-    //             echoCommand: false,
-    //             captureOutput: true
-    //           })
-    //           .then(res => {
-    //             logger.info(res.stdout.trim());
-    //           })
-    //           .catch(err => {
-    //             logger.error(err.message)
-    //           })
-    //       })
-    //   })
-    //   .catch(res => console.log(res))
   })
 
 // Return all the nodes in the network
@@ -338,7 +303,6 @@ function getAllActiveNodeInfo() {
     })
   })
 }
-
 
 // Return all the disabled nodes
 function getAllDisabledNodeInfo() {
@@ -377,8 +341,7 @@ function normalizeParams(params) {
         return r.concat(parseInt(a));
       }
       return r.concat(a);
-    }, []) :
-    []
+    }, []) : []
 }
 
 function buildWeightedList(data) {
@@ -398,19 +361,23 @@ function isOrphanGenerated() {
   return wl.peek()[0]
 }
 
-function mineBlock(id, username, password) {
-  run('python src/ntgbtminer.py ' + id + ' ' + username + ' ' + password, {
-      echoCommand: false,
-      captureOutput: true
-    })
-    .then(res => {
-      logger.info(res.stdout.trim());
-    })
-    .catch(err => {
-      logger.error(err.message)
-    })
+function mineBlock(port, username, password) {
+  return new Promise(function(resolve, reject) {
+    run('python src/ntgbtminer.py ' + port + ' ' + username + ' ' + password, {
+        echoCommand: false,
+        captureOutput: true
+      })
+      .then(res => {
+        console.log(port + ': ' + process.hrtime())
+        resolve(res.stdout.trim())
+      })
+      .catch(err => {
+        reject(err.message)
+      })
+  })
 }
 
+// send a request to one of the miner
 function sendRpcRequest(ip, port, user, password, method, ...params) {
   return new Promise(function(resolve, reject) {
     axios({
@@ -432,7 +399,7 @@ function sendRpcRequest(ip, port, user, password, method, ...params) {
       })
       .then(res => resolve(res))
       .catch(err => {
-        console.log(err);
+        console.log("Rpc error: " + err)
         reject(err)
       })
   })

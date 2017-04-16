@@ -13,14 +13,15 @@ import hashlib
 import struct
 import random
 import time
+import sys
 
 # JSON-HTTP RPC Configuration
 # This will be particular to your local ~/.bitcoin/bitcoin.conf
 
 ### Edit me! v
-RPC_URL     = "http://127.0.0.1:8332"
-RPC_USER    = "bitcoinrpc"
-RPC_PASS    = ""
+RPC_URL     = "http://127.0.0.1:16593"
+RPC_USER    = "root"
+RPC_PASS    = "root"
 ### Edit me! ^
 
 ################################################################################
@@ -37,12 +38,16 @@ def rpc(method, params=None):
     request = urllib2.Request(RPC_URL)
     request.add_header("Authorization", "Basic %s" % authstr)
     request.add_data(callstr)
-    f = urllib2.urlopen(request)
+    try:
+      f = urllib2.urlopen(request)
+    except ValueError:
+      response = json.loads(f.read())
     response = json.loads(f.read())
 
     if response['id'] != rpc_id:
         raise ValueError("invalid response id!")
     elif response['error'] != None:
+        print('error', json.dumps(response['error']))
         raise ValueError("rpc error: %s" % json.dumps(response['error']))
 
     return response['result']
@@ -298,6 +303,9 @@ def block_bits2target(bits):
 #
 # Returns true if header_hash meets target, false if it does not.
 def block_check_target(block_hash, target_hash):
+    return True
+
+def block_check_target_original(block_hash, target_hash):
     # Header hash must be strictly less than or equal to target hash
     for i in range(len(block_hash)):
         if ord(block_hash[i]) == ord(target_hash[i]):
@@ -379,7 +387,7 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
         time_stamp = time.clock()
 
         # Loop through the nonce
-        nonce = 0 if debugnonce_start == False else debugnonce_start
+        nonce = random.randint(1,100) if debugnonce_start == False else debugnonce_start
         while nonce <= 0xffffffff:
             # Update the block header with the new 32-bit nonce
             block_header = block_header[0:76] + chr(nonce & 0xff) + chr((nonce >> 8) & 0xff) + chr((nonce >> 16) & 0xff) + chr((nonce >> 24) & 0xff)
@@ -416,15 +424,26 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
 ################################################################################
 
 def standalone_miner(coinbase_message, address):
-    while True:
-        print "Mining new block template..."
-        mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, timeout=60)
+    # while True:
+    if len(sys.argv) < 3:
+        print('Args must be 3')
+        sys.exit(0)
 
-        if mined_block != None:
-            print "Solved a block! Block hash:", mined_block['hash']
-            submission = block_make_submit(mined_block)
-            print "Submitting:", submission, "\n"
-            rpc_submitblock(submission)
+    global RPC_URL
+    RPC_URL = "http://127.0.0.1:" + sys.argv[1]
+    global RPC_USER
+    RPC_USER = sys.argv[2]
+    global RPC_PASS
+    RPC_PASS = sys.argv[3]
+
+    print("Mining new block template...")
+    mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, timeout=60)
+
+    if mined_block != None:
+        print("Solved a block! Block hash:", mined_block['hash'])
+        submission = block_make_submit(mined_block)
+        # print("Submitting:", submission, "\n")
+        rpc_submitblock(submission)
 
 if __name__ == "__main__":
-    standalone_miner(bin2hex("Mined with <3!"), "15PKyTs3jJ3Nyf3i6R7D9tfGCY1ZbtqWdv")
+    standalone_miner(bin2hex("Mined with <3"), "15PKyTs3jJ3Nyf3i6R7D9tfGCY1ZbtqWdv")
