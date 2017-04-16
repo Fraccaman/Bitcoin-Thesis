@@ -11,7 +11,6 @@ const axios = require('axios')
 const crypto = require('crypto')
 
 let db = new sqlite3.cached.Database('nodes.sqlite')
-let node;
 
 prog
   .version('1.0.0')
@@ -26,7 +25,7 @@ prog
     getAllDisabledNodeInfo()
       .then(res => {
         res.forEach(value => {
-          run(value.bitcoind + options.reindex ? ' --reindex' : '', {
+          run(value.bitcoind + (options.reindex ? ' --reindex' : ''), {
               echoCommand: false,
               captureOutput: true
             })
@@ -232,29 +231,74 @@ prog
   .command('mine', 'Mine and submit a block. If [node] is empty a random node will be choosen based on a weighted probability.')
   .argument('[node]', 'Node ID', prog.INT)
   .action(function(args, options, logger) {
-    getAllNodes()
-      .then(res => {
-        const data = res.map(function(item) {
-          return [item.id, item.probability]
+    // if a node ID is passed as argument, we don't need to choose the the miner
+    if (args.node != undefined && args.node != null) {
+      getNodeInfo(args.node)
+        .then(res => {
+          run('python src/ntgbtminer.py ' + res.rpcport + ' ' + 'root' + ' ' + 'root', {
+              echoCommand: false,
+              captureOutput: true
+            })
+            .then(res => {
+              logger.info(res.stdout.trim());
+            })
+            .catch(err => {
+              logger.error(err.message)
+            })
         })
-        let wl = new WeightedList(data)
-        const nextNode = wl.peek()
-        // TODO: add probability that a orphan block is generated
-        getNodeInfo(args.node || nextNode[0])
-          .then(res => {
-            run('python src/ntgbtminer.py ' + res.rpcport + ' ' + 'root' + ' ' + 'root', {
-                echoCommand: false,
-                captureOutput: true
-              })
-              .then(res => {
-                logger.info(res.stdout.trim());
-              })
-              .catch(err => {
-                logger.error(err.message)
-              })
-          })
-      })
-      .catch(res => console.log(res))
+    } else {
+      getAllNodes()
+        .then(res => {
+          // get the next miner
+          const weightedList = buildWeightedList(res)
+          let nextMiner = getNextMiner(weightedList)
+          console.log('Next miner: ' + nextMiner)
+          // check if an orphan is generated
+          const nOfOrphans = isOrphanGenerated()
+          console.log('N. of orphans: ' + nOfOrphans);
+          run('python src/ntgbtminer.py ' + res[nextMiner].rpcport + ' ' + 'root' + ' ' + 'root', {
+              echoCommand: false,
+              captureOutput: true
+            })
+            .then(res => {
+              logger.info(res.stdout.trim());
+            })
+            .catch(err => {
+              logger.error(err.message)
+            })
+          // let promises = []
+          // for(let i = 0; i < nOfOrphans; i++) {
+          //   promises.push()
+          // }
+        })
+        .catch(err => console.log(err))
+    }
+
+
+    // getAllNodes()
+    //   .then(res => {
+    //     const data = res.map(function(item) {
+    //       return [item.id, item.probability]
+    //     })
+    //
+    //     let wl = new WeightedList(data)
+    //     const nextNode = wl.peek()
+    //     // TODO: add probability that a orphan block is generated
+    //     getNodeInfo(args.node || nextNode[0])
+    //       .then(res => {
+    //         run('python src/ntgbtminer.py ' + res.rpcport + ' ' + 'root' + ' ' + 'root', {
+    //             echoCommand: false,
+    //             captureOutput: true
+    //           })
+    //           .then(res => {
+    //             logger.info(res.stdout.trim());
+    //           })
+    //           .catch(err => {
+    //             logger.error(err.message)
+    //           })
+    //       })
+    //   })
+    //   .catch(res => console.log(res))
   })
 
 // Return all the nodes in the network
@@ -322,14 +366,31 @@ function randomValueHex(len) {
 
 // return a flatten array where number are casted to Num
 function normalizeParams(params) {
-  return params[0] != undefined && params[0].length > 0
-    ? params.reduce(function iter(r, a) {
+  return params[0] != undefined && params[0].length > 0 ?
+    params.reduce(function iter(r, a) {
       if (!isNaN(a)) {
         return r.concat(parseInt(a));
       }
       return r.concat(a);
-    }, [])
-    : []
+    }, []) :
+    []
+}
+
+function buildWeightedList(data) {
+  var fData = data.map(function(item) {
+    return [item.id, item.probability]
+  })
+  return new WeightedList(fData)
+}
+
+function getNextMiner(weightedList) {
+  return weightedList.peek()[0]
+}
+
+function isOrphanGenerated() {
+  probabilitiesOrphans = JSON.parse(require('fs').readFileSync('orphan.conf', 'utf8'))
+  const wl = new WeightedList(Object.entries(probabilitiesOrphans))
+  return wl.peek()[0]
 }
 
 function sendRpcRequest(ip, port, user, password, method, ...params) {

@@ -13,15 +13,14 @@ import hashlib
 import struct
 import random
 import time
-import sys
 
 # JSON-HTTP RPC Configuration
 # This will be particular to your local ~/.bitcoin/bitcoin.conf
 
 ### Edit me! v
-RPC_URL     = "http://127.0.0.1:16593"
-RPC_USER    = "root"
-RPC_PASS    = "root"
+RPC_URL     = "http://127.0.0.1:8332"
+RPC_USER    = "bitcoinrpc"
+RPC_PASS    = ""
 ### Edit me! ^
 
 ################################################################################
@@ -38,16 +37,12 @@ def rpc(method, params=None):
     request = urllib2.Request(RPC_URL)
     request.add_header("Authorization", "Basic %s" % authstr)
     request.add_data(callstr)
-    try:
-      f = urllib2.urlopen(request)
-    except ValueError:
-      response = json.loads(f.read())
+    f = urllib2.urlopen(request)
     response = json.loads(f.read())
 
     if response['id'] != rpc_id:
         raise ValueError("invalid response id!")
     elif response['error'] != None:
-        print('error', json.dumps(response['error']))
         raise ValueError("rpc error: %s" % json.dumps(response['error']))
 
     return response['result']
@@ -120,8 +115,18 @@ def bitcoinaddress2hash160(s):
     # Discard 1-byte network byte at beginning and 4-byte checksum at the end
     return x[2:50-8]
 
-def encode_coinbase_nheight(n, min_size = 1):
-  	# For encoding nHeight into coinbase
+################################################################################
+# Transaction coinbase height encoding
+################################################################################
+
+# Create a coinbase transaction
+#
+# Arguments:
+#       height:    the height of the mined block
+#
+# Return the height encoded as per BIP 34
+# See: https://github.com/bitcoin/bips/blob/master/bip-0034.mediawiki
+def encode_coinbase_height(n, min_size = 1):
   	s = bytearray(b'\1')
 
   	while n > 127:
@@ -129,14 +134,8 @@ def encode_coinbase_nheight(n, min_size = 1):
   		s.append(n % 256)
   		n //= 256
 
-  	# Add to byte array
   	s.append(n)
 
-  	# This can never be less that 1 bytes long
-  	if min_size < 1:
-  		min_size = 1
-
-  	# Satisfy Minimum Length
   	while len(s) < min_size + 1:
   		s.append(0)
   		s[0] += 1
@@ -155,11 +154,10 @@ def encode_coinbase_nheight(n, min_size = 1):
 #       value:              (unsigned int) value
 #
 # Returns transaction data in ASCII Hex
-def tx_make_coinbase(coinbase_script, address, value):
+def tx_make_coinbase(coinbase_script, address, value, height):
     # See https://en.bitcoin.it/wiki/Transaction
 
-    cb_height = bin2hex(encode_coinbase_nheight(312889))
-    coinbase_script = cb_height + coinbase_script
+    coinbase_script = bin2hex(encode_coinbase_height(height)) + coinbase_script
 
     # Create a pubkey script
     # OP_DUP OP_HASH160 <len to push> <pubkey> OP_EQUALVERIFY OP_CHECKSIG
@@ -300,9 +298,6 @@ def block_bits2target(bits):
 #
 # Returns true if header_hash meets target, false if it does not.
 def block_check_target(block_hash, target_hash):
-    return True
-
-def block_check_target_original(block_hash, target_hash):
     # Header hash must be strictly less than or equal to target hash
     for i in range(len(block_hash)):
         if ord(block_hash[i]) == ord(target_hash[i]):
@@ -371,7 +366,7 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
 
         # Update the coinbase transaction with the extra nonce
         coinbase_script = coinbase_message + int2lehex(extranonce, 4)
-        coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'])
+        coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'], block_template['height'])
         coinbase_tx['hash'] = tx_compute_hash(coinbase_tx['data'])
 
         # Recompute the merkle root
@@ -421,28 +416,16 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
 ################################################################################
 
 def standalone_miner(coinbase_message, address):
-    # while True:
-    if len(sys.argv) < 3:
-        print('Args must be 3')
-        sys.exit(0)
+    while True:
+        print "Mining new block template..."
+        mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, timeout=60)
+        print "Average Mhash/s: %.4f\n" % (hps / 1000000.0)
 
-    global RPC_URL
-    RPC_URL = "http://127.0.0.1:" + sys.argv[1]
-    global RPC_USER
-    RPC_USER = sys.argv[2]
-    global RPC_PASS
-    RPC_PASS = sys.argv[3]
-
-    print(rpc_getblocktemplate())
-
-    print("Mining new block template...")
-    mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, timeout=60)
-
-    if mined_block != None:
-        print("Solved a block! Block hash:", mined_block['hash'])
-        submission = block_make_submit(mined_block)
-        print("Submitting:", submission, "\n")
-        rpc_submitblock(submission)
+        if mined_block != None:
+            print "Solved a block! Block hash:", mined_block['hash']
+            submission = block_make_submit(mined_block)
+            print "Submitting:", submission, "\n"
+            rpc_submitblock(submission)
 
 if __name__ == "__main__":
-    standalone_miner(bin2hex("Mined with <3"), "15PKyTs3jJ3Nyf3i6R7D9tfGCY1ZbtqWdv")
+    standalone_miner(bin2hex("Mined with <3!"), "15PKyTs3jJ3Nyf3i6R7D9tfGCY1ZbtqWdv")

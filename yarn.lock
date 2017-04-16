@@ -195,6 +195,10 @@ axios@^0.16.1:
   dependencies:
     follow-redirects "^1.2.3"
 
+aybabtu@^1.1.5:
+  version "1.1.5"
+  resolved "https://registry.yarnpkg.com/aybabtu/-/aybabtu-1.1.5.tgz#d3f20c1550275a46e1c0216a6d42c42bc9844fd0"
+
 balanced-match@^0.4.1:
   version "0.4.2"
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-0.4.2.tgz#cb3f3e3c732dc0f01ee70b403f302e61d7709838"
@@ -3494,6 +3498,10 @@ signum@^0.0.0:
 signum@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/signum/-/signum-1.0.0.tgz#74a7d2bf2a20b40eba16a92b152124f1d559fa77"
+
+simple-statistics@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/simple-statistics/-/simple-statistics-3.0.0.tgz#54b66d2655b2a21125600dc0d02be764a3a73a3d"
 
 simplicial-complex-boundary@^1.0.0:
   version "1.0.1"

@@ -5,19 +5,17 @@ const sortBy = require('sort-by')
 const fs = require('fs');
 const _ = require('lodash')
 
-let global = 0
-
 const path = 'data.json'
 
 fs.readFile(path, 'utf8', function(err, data) {
-  if (err) throw err; // we'll not consider error handling for now
+  if (err) throw err;
   let obj = JSON.parse(data).values.sort(sortBy('-y'));
   let objGroupBy = _.groupBy(obj, function(n) {
     return n.y;
   })
   var json = {
     x: Object.keys(objGroupBy),
-    y: Object.keys(objGroupBy).map(item => item.length),
+    y: Object.keys(objGroupBy).map(item => objGroupBy[item].length),
     type: 'scatter'
   }
   fs.writeFile("data.js", JSON.stringify(json), function(err) {
@@ -26,6 +24,7 @@ fs.readFile(path, 'utf8', function(err, data) {
     }
     console.log("The file was saved!");
   });
+
 });
 
 function unixTime(unixtime) {
