@@ -2,52 +2,52 @@
 
 // const Plotly = require('plotly.js/lib/core');
 const sortBy = require('sort-by')
-const fs = require('fs');
+const fs = require('fs')
 const _ = require('lodash')
+const stats = require('simple-statistics')
 
-const path = 'stats/data-orphans-3y.json'
+const path = 'stats/data-difficulty-3y.json'
 
 fs.readFile(path, 'utf8', function(err, data) {
   if (err) throw err;
-  let obj = JSON.parse(data).values.slice(0, 364).sort(sortBy('-y'))
-  let objGroupBy = _.groupBy(obj, function(n) {
-    return n.y;
-  })
+  let obj = JSON.parse(data).values.slice(0, 364)
+
   var json = {
-    x: Object.keys(objGroupBy),
-    y: Object.keys(objGroupBy).map(item => objGroupBy[item].length),
+    x: Array.from(Array(365), (_, i) => i),
+    y: Object.keys(obj).map(item => obj[item].y),
     type: 'scatter',
     name: '1st year',
   }
 
+  console.log('MIN: ' + stats.min(json.y));
+  console.log('MAX: ' + stats.max(json.y));
+  console.log('MEAN: ' + stats.mean(json.y));
+  console.log('----------------------------')
+
   let obj2 = JSON.parse(data).values.slice(365, 729);
-  let objGroupBy2 = _.groupBy(obj2, function(n) {
-    return n.y;
-  })
   var json2 = {
-    x: Object.keys(objGroupBy2),
-    y: Object.keys(objGroupBy2).map(item => objGroupBy2[item].length),
+    x: Array.from(Array(365), (_, i) => i),
+    y: Object.keys(obj2).map(item => obj2[item].y),
     type: 'scatter',
     name: '2nd year',
   }
 
-  let obj3 = JSON.parse(data).values.slice(730, JSON.parse(data).values.length).sort(sortBy('-y'));
-  let objGroupBy3 = _.groupBy(obj3, function(n) {
-    return n.y;
-  })
+  console.log('MIN: ' + stats.min(json2.y));
+  console.log('MAX: ' + stats.max(json2.y));
+  console.log('MEAN: ' + stats.mean(json2.y));
+  console.log('----------------------------')
+
+  let obj3 = JSON.parse(data).values.slice(730, JSON.parse(data).values.length);
   var json3 = {
-    x: Object.keys(objGroupBy3),
-    y: Object.keys(objGroupBy3).map(item => objGroupBy3[item].length),
+    x: Array.from(Array(365), (_, i) => i),
+    y: Object.keys(obj3).map(item => obj3[item].y),
     type: 'scatter',
     name: '3rd year',
   }
 
-  var json4 = {
-    x: [30436124847.167282, 82813528994.3985, 285952065701.3271],
-    y: [261, 217, 95],
-    type: 'scatter',
-    name: 'testing'
-  }
+  console.log('MIN: ' + stats.min(json3.y));
+  console.log('MAX: ' + stats.max(json3.y));
+  console.log('MEAN: ' + stats.mean(json3.y));
 
   const index  =
   `<head>
@@ -61,12 +61,12 @@ fs.readFile(path, 'utf8', function(err, data) {
     <script>
       var data = [${JSON.stringify(json)}, ${JSON.stringify(json2)}, ${JSON.stringify(json3)}]
       Plotly.newPlot('myDiv1', data);
-      var data2 = [${JSON.stringify(json4)}]
-      Plotly.newPlot('myDiv2', data2);
+      // var data2 = [${JSON.stringify(json2)}]
+      // Plotly.newPlot('myDiv2', data2);
     </script>
   </body>`
 
-  fs.writeFile("stats/index2.html", index, function(err) {
+  fs.writeFile("stats/index.html", index, function(err) {
     if (err) {
       return console.log(err);
     }

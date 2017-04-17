@@ -260,7 +260,6 @@ prog
           console.log('N. of orphans: ' + nOfOrphans)
           for (var i = 0; i < nOfOrphans; i++) {
             nextMiner = getNextMiner(weightedList)
-            console.log('Orphan Miner:' + nextMiner);
             minerList.push(mineBlock(res[nextMiner].rpcport, res[nextMiner].rpcusername, res[nextMiner].rpcpassword))
           }
           bluebird.all(minerList)
@@ -368,7 +367,7 @@ function mineBlock(port, username, password) {
         captureOutput: true
       })
       .then(res => {
-        console.log(port + ': ' + process.hrtime())
+        console.log('Start time for node with port ' + port + ': ' + process.hrtime())
         resolve(res.stdout.trim())
       })
       .catch(err => {
