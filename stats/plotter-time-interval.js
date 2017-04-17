@@ -41,8 +41,8 @@ fs.readFile(path, 'utf8', function(err, data) {
   });
 
   var json = {
-    x: Array.from(Array(n), (_, i) => i),
-    y: test,
+    x: Array.from(Array(blocksTime.length), (_, i) => i),
+    y: blocksTime,
     type: 'scatter'
   }
 

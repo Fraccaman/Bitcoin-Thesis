@@ -87,13 +87,3 @@ function unixTime(unixtime) {
     ':' + ('0' + u.getUTCSeconds()).slice(-2) +
     '.' + (u.getUTCMilliseconds() / 1000).toFixed(3).slice(2, 5)
 };
-
-// var trace1 = {
-//   x: data.map(function(item) {
-//     return [item.x]
-//   }),
-//   y: res.map(function(item) {
-//     return [item.y]
-//   }),
-//   type: 'scatter'
-// };
