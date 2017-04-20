@@ -405,4 +405,25 @@ function sendRpcRequest(ip, port, user, password, method, ...params) {
   })
 }
 
+// get a random number from a normal distribution
+function marsagliaPolarMethod(mean, stdDev) {
+  let spare;
+  let isSpareReady = false;
+  if (isSpareReady) {
+    isSpareReady = false;
+    return spare * stdDev + mean;
+  } else {
+    let u, v, s;
+    do {
+      u = Math.random() * 2 - 1;
+      v = Math.random() * 2 - 1;
+      s = u * u + v * v;
+    } while (s >= 1 || s == 0);
+    let mul = Math.sqrt(-2.0 * Math.log(s) / s);
+    spare = v * mul;
+    isSpareReady = true;
+    return mean + stdDev * u * mul;
+  }
+}
+
 prog.parse(process.argv);
