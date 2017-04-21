@@ -235,6 +235,10 @@ binary-search-bounds@^2.0.0, binary-search-bounds@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/binary-search-bounds/-/binary-search-bounds-2.0.3.tgz#5ff8616d6dd2ca5388bc85b2d6266e2b9da502dc"
 
+bindings@~1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/bindings/-/bindings-1.2.1.tgz#14ad6113812d2d37d72e67b4cacb4bb726505f11"
+
 bit-twiddle@^1.0.0, bit-twiddle@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/bit-twiddle/-/bit-twiddle-1.0.2.tgz#0c6c1fabe2b23d17173d9a61b7b7093eb9e1769e"
@@ -754,6 +758,19 @@ dashdash@^1.12.0:
   resolved "https://registry.yarnpkg.com/dashdash/-/dashdash-1.14.1.tgz#853cfa0f7cbe2fed5de20326b8dd581035f6e2f0"
   dependencies:
     assert-plus "^1.0.0"
+
+deasync-promise@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/deasync-promise/-/deasync-promise-1.0.1.tgz#2b27de478167af4ef34ba99879c52ec0cedd61c2"
+  dependencies:
+    deasync "^0.1.7"
+
+deasync@^0.1.7:
+  version "0.1.9"
+  resolved "https://registry.yarnpkg.com/deasync/-/deasync-0.1.9.tgz#f58dd49fa63110c74bea8405a90a828be26d3a24"
+  dependencies:
+    bindings "~1.2.1"
+    nan "^2.0.7"
 
 debug@^2.2.0, debug@^2.4.5:
   version "2.6.3"
@@ -2366,6 +2383,10 @@ micromist@^1.0.1:
   dependencies:
     lodash.camelcase "^4.3.0"
 
+microstats@^0.1.2:
+  version "0.1.2"
+  resolved "https://registry.yarnpkg.com/microstats/-/microstats-0.1.2.tgz#931453fbd90b2c7777fed47d2a89c3a8b690ed5c"
+
 mime-db@~1.27.0:
   version "1.27.0"
   resolved "https://registry.yarnpkg.com/mime-db/-/mime-db-1.27.0.tgz#820f572296bbd20ec25ed55e5b5de869e5436eb1"
@@ -2478,7 +2499,7 @@ mute-stream@0.0.6, mute-stream@~0.0.4:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/mute-stream/-/mute-stream-0.0.6.tgz#48962b19e169fd1dfc240b3f1e7317627bbc47db"
 
-nan@~2.4.0:
+nan@^2.0.7, nan@~2.4.0:
   version "2.4.0"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.4.0.tgz#fb3c59d45fe4effe215f0b890f8adf6eb32d2232"
 
@@ -3053,6 +3074,10 @@ prettyjson@^1.2.1:
 process-nextick-args@~1.0.6:
   version "1.0.7"
   resolved "https://registry.yarnpkg.com/process-nextick-args/-/process-nextick-args-1.0.7.tgz#150e20b756590ad3f91093f25a4f2ad8bff30ba3"
+
+promise-limit@^2.3.0:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/promise-limit/-/promise-limit-2.3.0.tgz#5b0fed39e709248a31f04ae1c856b8214f89d5ce"
 
 promzard@^0.3.0:
   version "0.3.0"
@@ -3792,6 +3817,12 @@ surface-nets@^1.0.0, surface-nets@^1.0.2:
     ndarray-extract-contour "^1.0.0"
     triangulate-hypercube "^1.0.0"
     zero-crossings "^1.0.0"
+
+system-sleep@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/system-sleep/-/system-sleep-1.3.0.tgz#4e4351ea739e3acfd92f6b2a44c0252b13db3a65"
+  dependencies:
+    deasync-promise "1.0.1"
 
 tabtab@^2.2.2:
   version "2.2.2"

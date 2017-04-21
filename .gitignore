@@ -36,6 +36,8 @@ lib/**
 # data normalized to be plotted
 data*.js
 
+# html
+*.html
 
 # .txt files
 *.txt

@@ -446,4 +446,4 @@ def standalone_miner(coinbase_message, address):
         rpc_submitblock(submission)
 
 if __name__ == "__main__":
-    standalone_miner(bin2hex("Mined with <3"), "15PKyTs3jJ3Nyf3i6R7D9tfGCY1ZbtqWdv")
+    standalone_miner(bin2hex("Mined with <3"), sys.argv[4])

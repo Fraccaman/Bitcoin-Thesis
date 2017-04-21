@@ -35,12 +35,11 @@ function randomValueHex(len) {
 function normalizeParams(params) {
   return params[0] != undefined && params[0].length > 0 ?
     params.reduce(function iter(r, a) {
-      if (!isNaN(a)) {
-        return r.concat(parseInt(a));
+      if (!isNaN(a) && typeof(a) !== "boolean") {
+        return r.concat(parseInt(a))
       }
-      return r.concat(a);
-    }, []) :
-    []
+      return _.uniq(params)
+    }, []) : []
 }
 
 function sendRpcRequest(ip, port, user, password, method, ...params) {
