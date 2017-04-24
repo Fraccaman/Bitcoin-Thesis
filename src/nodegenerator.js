@@ -3,7 +3,6 @@
 const prog = require('caporal')
 const os = require('os')
 const bluebird = require('bluebird')
-const _ = require('lodash')
 const fs = bluebird.promisifyAll(require('fs'))
 var sqlite3 = require('sqlite3').verbose();
 const rm = require('find-remove')
