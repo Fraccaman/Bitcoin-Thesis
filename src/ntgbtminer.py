@@ -14,6 +14,7 @@ import struct
 import random
 import time
 import sys
+import datetime
 
 # JSON-HTTP RPC Configuration
 # This will be particular to your local ~/.bitcoin/bitcoin.conf
@@ -56,9 +57,13 @@ def rpc(method, params=None):
 # Bitcoin Daemon RPC Call Wrappers
 ################################################################################
 
-def rpc_getblocktemplate():
-    try: return rpc("getblocktemplate", [{}])
-    except ValueError: return {}
+def rpc_getblocktemplate(blocksize = None):
+    if blocksize is None:
+        try: return rpc("getblocktemplate", [])
+        except ValueError: return {}
+    else:
+        try: return rpc("getblocktemplate", [blocksize])
+        except ValueError: return {}
 
 def rpc_submitblock(block_submission):
     try: return rpc("submitblock", [block_submission])
@@ -159,7 +164,7 @@ def encode_coinbase_height(n, min_size = 1):
 #       value:              (unsigned int) value
 #
 # Returns transaction data in ASCII Hex
-def tx_make_coinbase(coinbase_script, address, value, height):
+def tx_make_coinbase(coinbase_script, address, value, height, sequence):
     # See https://en.bitcoin.it/wiki/Transaction
 
     coinbase_script = bin2hex(encode_coinbase_height(height)) + coinbase_script
@@ -168,7 +173,12 @@ def tx_make_coinbase(coinbase_script, address, value, height):
     # OP_DUP OP_HASH160 <len to push> <pubkey> OP_EQUALVERIFY OP_CHECKSIG
     pubkey_script = "76" + "a9" + "14" + bitcoinaddress2hash160(address) + "88" + "ac"
 
-    tx = ""
+    # print('cb_script', coinbase_script)
+    # print('hash160', bitcoinaddress2hash160(address))
+    # print('value', value, int2lehex(value, 8))
+    # print('test', int(sequence), hex(int(sequence))[2:].zfill(8))
+
+    tx = ''
     # version
     tx += "01000000"
     # in-counter
@@ -182,7 +192,7 @@ def tx_make_coinbase(coinbase_script, address, value, height):
     # input[0] script
     tx += coinbase_script
     # input[0] seqnum
-    tx += "ffffffff"
+    tx += hex(int(sequence))[2:].zfill(8)
     # out-counter
     tx += "01"
     # output[0] value (little endian)
@@ -207,13 +217,14 @@ def tx_compute_hash(tx):
     h2 = hashlib.sha256(h1).digest()
     return bin2hex(h2[::-1])
 
-# Compute the Merkle Root of a list of transaction hashes
+# Compute the Merkle/ Root of a list of transaction hashes
 #
 # Arguments:
 #       tx_hashes:    (list) ASCII Hex transaction hashes
 #
 # Returns a SHA256 double hash in big endian ASCII Hex
 def tx_compute_merkle_root(tx_hashes):
+    # print('check if coinbase hash', tx_hashes[0])
     # Convert each hash into a binary string
     for i in range(len(tx_hashes)):
         # Reverse the hash from big endian to little endian
@@ -322,6 +333,9 @@ def block_check_target_original(block_hash, target_hash):
 #
 # Returns block in ASCII Hex submit format
 def block_make_submit(block):
+
+    # print(block)
+
     subm = ""
 
     # Block header
@@ -352,7 +366,7 @@ def block_make_submit(block):
 #
 # Returns tuple of (solved block, hashes per second) on finding a solution,
 # or (None, hashes per second) on timeout or nonce exhaustion.
-def block_mine(block_template, coinbase_message, extranonce_start, address, timeout=False, debugnonce_start=False):
+def block_mine(block_template, cb_script, extranonce_start, address, sequence, timeout=False, debugnonce_start=False):
     # Add an empty coinbase transaction to the block template
     coinbase_tx = {}
     block_template['transactions'].insert(0, coinbase_tx)
@@ -373,9 +387,13 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
     while extranonce <= 0xffffffff:
 
         # Update the coinbase transaction with the extra nonce
-        coinbase_script = coinbase_message + int2lehex(extranonce, 4)
-        coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'], block_template['height'])
-        coinbase_tx['hash'] = tx_compute_hash(coinbase_tx['data'])
+        coinbase_script = cb_script
+        coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'], block_template['height'], sequence)
+        # coinbase_tx['hash'] = tx_compute_hash(coinbase_tx['data'])
+        coinbase_tx['hash'] = 'c127cd37dfce1729564f462baebdd5fc7ca673182b8ae8ed44ad586dd8b23c4b'
+        coinbase_tx['hash'] = ''.join(['f' for i in range(len(coinbase_tx['hash']))])
+
+        # print(coinbase_tx)
 
         # Recompute the merkle root
         tx_hashes = [tx['hash'] for tx in block_template['transactions']]
@@ -385,6 +403,8 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
         block_header = block_form_header(block_template)
 
         time_stamp = time.clock()
+
+        # print('coinbase_tx_hash', coinbase_tx['hash'])
 
         # Loop through the nonce
         nonce = random.randint(1,100) if debugnonce_start == False else debugnonce_start
@@ -426,7 +446,7 @@ def block_mine(block_template, coinbase_message, extranonce_start, address, time
 def standalone_miner(coinbase_message, address):
     # while True:
     if len(sys.argv) < 3:
-        print('Args must be 3')
+        # print('Args must be 3')
         sys.exit(0)
 
     global RPC_URL
@@ -436,14 +456,18 @@ def standalone_miner(coinbase_message, address):
     global RPC_PASS
     RPC_PASS = sys.argv[3]
 
-    print("Mining new block template...")
-    mined_block, hps = block_mine(rpc_getblocktemplate(), coinbase_message, 0, address, timeout=60)
+    blocksize = 1000000
+
+    if (len(sys.argv) > 7):
+        blocksize = int(sys.argv[7])
+
+    mined_block, hps = block_mine(rpc_getblocktemplate(blocksize), sys.argv[5], 0, sys.argv[4], sys.argv[6], timeout=60)
 
     if mined_block != None:
-        print("Solved a block! Block hash:", mined_block['hash'])
+        print('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()))
+        print(mined_block['hash'], len(mined_block['transactions']))
         submission = block_make_submit(mined_block)
-        # print("Submitting:", submission, "\n")
         rpc_submitblock(submission)
 
 if __name__ == "__main__":
-    standalone_miner(bin2hex("Mined with <3"), sys.argv[4])
+    standalone_miner(bin2hex("Mined with <3"), 'test')

@@ -41,3 +41,6 @@ data*.js
 
 # .txt files
 *.txt
+
+# csv files
+*.csv

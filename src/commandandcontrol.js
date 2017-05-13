@@ -9,10 +9,21 @@ const axios = require('axios')
 const crypto = require('crypto')
 const microstats = require('microstats')
 const promiseLimit = require('promise-limit')
-const sleep = require('system-sleep')
+const sleep = require('sleep')
 const _ = require('lodash')
+const hashes = require('hashes')
+const fs = require('fs-extra')
+const os = require('os')
+const path = require('path')
+const decompress = require('decompress')
+const json2csv = require('json2csv')
+const LineByLineReader = require('line-by-line')
+const csv = require('csvtojson')
+
 
 let db = new sqlite3.cached.Database('nodes.sqlite')
+let blockSizes = []
+let intervals = []
 
 prog
   .version('1.0.0')
@@ -27,7 +38,7 @@ prog
     getAllDisabledNodeInfo()
       .then(res => {
         res.forEach(value => {
-          run(value.bitcoind + (options.reindex ? ' --reindex' : ''), {
+          run(value.bitcoind + ' -minrelaytxfee=0.0' + ' -limitancestorcount=10000' + ' -limitancestorsize=500000' + ' -limitdescendantcount=10000' + ' -limitdescendantsize=10000' + ' -blockmaxsize=1000000' + ' -blockmintxfee=0.0' + ' -maxmempool=400' + (options.reindex ? ' --reindex' : ''), {
               echoCommand: false,
               captureOutput: true
             })
@@ -55,8 +66,8 @@ prog
   .option('--reindex', 'Reindex the chain', prog.BOOL, false)
   .action(function(args, options, logger) {
     getNodeInfo(args.node)
-      .then(res => {
-        run(res.bitcoind + (options.reindex ? ' --reindex' : ''), {
+      .then(value => {
+        run(value.bitcoind + ' -minrelaytxfee=0.0' + ' -limitancestorcount=100' + ' -limitancestorsize=1000' + ' -limitdescendantcount=100' + ' -limitdescendantsize=1000' + ' -blockmaxsize=1000000' + ' -blockmintxfee=0.0' + (options.reindex ? ' --reindex' : ''), {
             echoCommand: false,
             captureOutput: true
           })
@@ -113,6 +124,55 @@ prog
             console.log('Error: ' + err);
           })
       })
+  })
+
+  .command('restartall', 'Pretty print all nodes info in the network')
+  .option('--reset', 'Reset the node before start', prog.BOOL, false)
+  .option('--hard', 'Reset the node before start', prog.BOOL, false)
+  .action(async(args, options, logger) => {
+
+    const nodes = await getAllActiveNodeInfo()
+
+    const pathToNetwork = os.homedir() + '/Network/Nodes'
+    const pathToBackup = os.homedir() + '/node_backup.zip'
+    const pathToUnzipedFiles = os.homedir() + '/test/'
+
+    for (node of nodes) {
+      await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'stop')
+      sleep.sleep(2)
+      await turnNodeOnOff(node.id, 0)
+
+      if (options.hard) {
+        const files = fs.readdirSync(pathToNetwork + '/' + node)
+        for (const file of files) {
+          if (file != 'bitcoin.conf') {
+            await fs.remove(path.join(pathToNetwork + '/' + node, file))
+          }
+        }
+        console.log('Done deleting node ' + node)
+        const backupFiles = fs.readdirSync(pathToUnzipedFiles + '/0')
+        for (file of backupFiles) {
+          if (file != 'bitcoin.conf') {
+            try {
+              await fs.copy(pathToUnzipedFiles + '0/' + file, pathToNetwork + '/' + node + '/' + file)
+            } catch (e) {
+              console.log(e);
+            }
+          }
+        }
+        console.log('Done resetting node ' + node)
+      }
+      if (options.reset) {
+        fs.removeSync(os.homedir() + '/Network/Nodes/' + node + '/mempool.dat')
+        fs.removeSync(os.homedir() + '/Network/Nodes/' + node + '/debug.log')
+        fs.removeSync(os.homedir() + '/Network/Nodes/' + node + '/db.log')
+        console.log('Node ' + node + ' mempool has been deleted')
+      }
+      sleep.sleep(5)
+      await run(node.bitcoind + ' -minrelaytxfee=0.0' + ' -limitancestorcount=100' + ' -limitancestorsize=1000' + ' -limitdescendantcount=100' + ' -limitdescendantsize=1000' + ' -blockmaxsize=1000000' + ' -blockmintxfee=0.0')
+      await turnNodeOnOff(node.id, 1)
+    }
+
   })
 
   /**
@@ -305,10 +365,111 @@ prog
   })
 
   /**
+   * Reset the environment mempool
+   * @param {bool} hard - reset the network to the checkpoint status (height 398482)
+   */
+
+  .command('reset', 'Reset the test enviroment')
+  .option('--hard', 'Reset the environment to the checkpoint ( NOT IMPLEMENTED ATM )', prog.BOOL, false)
+  .action(async(args, options, logger) => {
+
+    const nodes = await getAllActiveNodeInfo()
+
+    for (node of nodes) {
+      sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'stop')
+      turnNodeOnOff(node.id, 0)
+    }
+
+    if (options.hard) {
+      const pathToNetwork = os.homedir() + '/Network/Nodes'
+      const pathToBackup = os.homedir() + '/node_backup.zip'
+      const pathToUnzipedFiles = os.homedir() + '/test/'
+
+      const nodes = fs.readdirSync(pathToNetwork).filter(file => fs.statSync(path.join(pathToNetwork, file)).isDirectory())
+
+      for (node of nodes) {
+        const files = fs.readdirSync(pathToNetwork + '/' + node)
+        for (const file of files) {
+          if (file != 'bitcoin.conf') {
+            await fs.remove(path.join(pathToNetwork + '/' + node, file))
+          }
+        }
+        console.log('Done deleting node ' + node)
+        const backupFiles = fs.readdirSync(pathToUnzipedFiles + '/0')
+        for (const file of backupFiles) {
+          if (file != 'bitcoin.conf') {
+            try {
+              await fs.copy(pathToUnzipedFiles + '0/' + file, pathToNetwork + '/' + node + '/' + file)
+            } catch (e) {
+              console.log(e);
+            }
+          }
+        }
+        console.log('Done resetting node ' + node)
+      }
+    } else {
+      const dirs = fs.readdirSync(os.homedir() + '/Network/Nodes').filter(file => fs.statSync(path.join(os.homedir() + '/Network/Nodes', file)).isDirectory())
+      for (dir of dirs) {
+        fs.removeSync(os.homedir() + '/Network/Nodes/' + dir + '/mempool.dat')
+        fs.removeSync(os.homedir() + '/Network/Nodes/' + dir + '/debug.log')
+        fs.removeSync(os.homedir() + '/Network/Nodes/' + dir + '/db.log')
+        console.log('Node ' + dir + ' mempool has been deleted')
+      }
+    }
+  })
+
+  .command('check', 'Check the enviroment status')
+  .option('--blkcount', 'Check block count is 398482 / equal for all', prog.BOOL, false)
+  .option('--mempool', 'Check the mempool status', prog.BOOL, false)
+  .action(async(args, options, logger) => {
+    const nodes = await getAllActiveNodeInfo()
+
+    // check heights
+
+    if (!options.blkcount) {
+      let heights = []
+      for (node of nodes) {
+        const height = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblockcount')
+        heights.push(height.data.result)
+      }
+
+      const firstHeight = heights[0]
+      if (firstHeight != 398482) console.log('Height is not at checkpoint (' + firstHeight + ')!')
+      for (height of heights) {
+        if (height != firstHeight) {
+          console.log('Heights are different!');
+          break;
+        }
+      }
+    }
+
+    // check mempool
+
+    if (!options.mempool) {
+      let mempools = []
+      for (node of nodes) {
+        const mempool = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
+        mempools.push({
+          mempool: mempool.data.result.size,
+          node: node.id
+        })
+      }
+
+      for (data of mempools) {
+        if (data.mempool.size != 0) {
+          console.log('Node ' + data.node + ' has mempool size of ' + data.mempool);
+        }
+      }
+    }
+
+  })
+
+  /**
    * Start collecting data with different protocol / network settings
    * @param {Int} nOfBlocks - required paramter describe on how many blocks the test should be done
    * @param {Int} blockSize - optional paramter describe the block size
    * @param {Int} interval - optional paramter describe the interval size
+   * @param {Int} difficulty - optional paramter describe the difficulty for the next blocks
    * @param {Int} hashingConf - optional paramter path file describing the hashing power of nodes
    * @param {Int} orphanConf - optional paramter path to file describing the orphan rate
    * @param {Int} statusConf - optional paramter path to file describing the status probability
@@ -319,68 +480,377 @@ prog
   .argument('[height]', 'Custom height (testing) ', prog.INT)
   .argument('[crash]', 'Probability that a node crash [0-1]', prog.INT, 0)
   .argument('[restart]', 'Probability that a node restart from a shutdown [0-1]', prog.INT, 0)
-  .argument('[blockSize]', 'Maximum size of a block in kilobyte', prog.INT, 1000)
-  .argument('[interval]', 'Interval between blocks creation in seconds', prog.INT, 600)
-  .argument('[rpcWorker]', 'Numbe of bitcoin rpc parallel handler', prog.INT, 16)
+  .argument('[blockSize]', 'Mean size of a block in kilobyte', prog.INT, 900)
+  .argument('[interval]', 'Mean Interval between blocks creation in seconds', prog.INT, 562)
+  .argument('[difficulty]', 'Difficulty', prog.INT, 0)
+  .argument('[rpcWorker]', 'Number of bitcoin rpc parallel handler', prog.INT, 16)
   .option('--alert', 'Alert on memory, cpu and disk usage (> 90%)')
+  .option('--mine', 'If true, then mine the block', prog.BOOL, false)
+  .option('--orphans', 'If true, orphans are generated', prog.BOOL, false)
+  .option('--analysis', 'If true, data are saved to db', prog.BOOL, false)
   .action(async(args, options, logger) => {
+
     if (options.status) turnStatusAlert()
     if (!assertEnoughSpace()) process.exit(1)
 
-    const currentHeight = args.height || await getNextHeight()
     const master = await getMasterInfo()
+    const node = await sendQuery('SELECT * FROM Node WHERE id = 0')
+    let tails = [];
 
-    const { tx: txList, time: blkTime, difficulty: blkDifficulty } = await getNextBlockFromMaster(master, currentHeight, true)
-    let fullTxList = await buildFullTransaction(txList)
-    // console.log('N. of txs: ' + txList.length);
-    const coinbase = getCoinbase(fullTxList)
+    if (options.analysis)
+      tails = await setupAnalysisEnvironment()
 
-    let res = await sendTxs(fullTxList, args.blockSize)
-    await mineNextBlock(coinbase)
+    let coinbases = []
+    let nextHeight = args.height || await getNextHeight()
 
+    debug('nextHeight', nextHeight)
+    debug('args.nOfBlocks', args.nOfBlocks)
 
-    // const res = await sendTxs(master, txList, args.blockSize)
+    console.log("Starting with blocks...");
 
-    // console.log(txList.length, blkTime, blkDifficulty);
+    let nextBlockSize;
+    let nextInterval;
 
-    // const master = await getMasterInfo()
-    // let height = args.height
-    // const {
-    //   tx: txList,
-    //   time: blkTime
-    // } = await getNextBlockFromMaster(master, args.height, true)
-    // const coinbase = txList[0]
-    // txList.shift()
-    // const nOfTxSent = await sendTx(master, txList, args.blockSize)
-    // console.log(nOfTxSent + ' over ' + txList.length);
-    // const { time: txTime } = await getTransactionByTxId(master, txList[0])
-    // const { hex: txHex, size: txSize, vin: coinbase } = await getTransactionByTxId(master, txList[0])
+    for (let k = 0; k < args.nOfBlocks; k++) {
 
-    // getTransactionByTxId(master, nextBlock.data.result.tx[0])
-    //   .then(res => console.log(res.data.result))
+      nextBlockSize = await getNextBlockSize(args.blockSize)
+      blockSizes.push(nextBlockSize)
+      debug('nextBlockSize', nextBlockSize)
+
+      nextInterval = await getNextInterval(args.interval)
+      intervals.push(nextInterval)
+      debug('nextInterval', nextInterval)
+
+      let actualMempoolSize = await getMempoolInfo('min')
+      debug('actualMempoolSize min', actualMempoolSize)
+
+      while (actualMempoolSize < nextBlockSize) {
+        const {
+          tx: txList
+        } = await getNextBlockFromMaster(master, nextHeight, true)
+        debug('txList size before coinbase', txList.length)
+
+        await getCoinbase(master, txList, coinbases)
+        debug('txList size after coinbase', txList.length)
+
+        const fullTxList = await buildFullTransaction(txList)
+        debug('fullTxList size', fullTxList.length)
+        debug('coinbases size', coinbases.length)
+
+        for (var i = 0; i < fullTxList.length; i++) {
+          try {
+            await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', fullTxList[i].hex)
+          } catch (e) {
+            debug('Error:', e)
+          }
+        }
+
+        try {
+          actualMempoolSize = await getMempoolInfo('max')
+        } catch (err) {
+          console.log(err);
+        }
+        debug('update actualMempoolSize max', actualMempoolSize)
+        nextHeight++
+      }
+
+      // TODO: add probability of orphan miner
+      const nOfOrphans = areOrphansGenerated(nextBlockSize, nextInterval, args.difficulty, options.orphans)
+      debug('nOfOrphans', nOfOrphans)
+      const minerList = await buildMinerList(nOfOrphans)
+      debug('minerList length', minerList.length)
+      const coinbaseNextBlock = coinbases.shift()
+      debug('coinbase', coinbaseNextBlock.address)
+
+      let index = 0
+      try {
+        while (!(await allNodesAreTxSynched()) && index < 12) {
+          console.log('Synchronizing ... cya @ 15')
+          sleep.sleep(15)
+          ++index
+        }
+
+      } catch (err) {
+        console.log('err', err);
+      }
+
+      console.log('Start mining ...');
+
+      sleep.sleep(2)
+
+      const res = await mineBlock(minerList, coinbaseNextBlock.address, coinbaseNextBlock.coinbase, coinbaseNextBlock.sequence, options.mine, nextBlockSize)
+
+      console.log('Finished mining ...');
+
+      // nodesRestartingCrashing(args.restart, args.crash)
+
+      sleep.sleep(2)
+
+      console.log(' ------- END CYCLE ' + k + '-------');
+
+    }
+
+    while (!(await allNodesAreBlkSynched())) {
+      console.log('Synchronizing ... cya @ 5s')
+      sleep.sleep(5)
+    }
+
+    if (options.analysis)
+      await processLogData()
+
+    // process.exit()
+
   })
 
-async function mineNextBlock(coinbase) {
-  let hashingPowerNodes = await buildHashingPowerList()
-  const nodeId = getNextMiner(hashingPowerNodes)
-  const node = await getNodeInfo(nodeId)
-  return new Promise(function(resolve, reject) {
-    resolve(console.log('Node ' + node.id + ' is mining next block'))
-    // run('python src/ntgbtminer.py ' + node.rpcport + ' ' + node.rpcusername + ' ' + node.rpcpassword, coinbase {
-    //     echoCommand: false,
-    //     captureOutput: true
-    //   })
-    //   .then(res => {
-    //     console.log(res.stdout.trim())
-    //   })
-    //   .catch(err => {
-    //     console.log(err.message)
-    //   })
+  .command('latency', 'test')
+  .argument('[latencies...]', 'Set Latencies')
+  .action(async(args, options, logger) => {
+
+    // get all nodes
+    // assign to each a continent based on the nodes distribution (ZONE)
+
+    // set delay by watching the zone of that node to the zone of the other
+
+    const nodes = await getAllNodes()
+
+    const latencyMatrixPath = 'latencies.csv'
+    const nodesDistribution = 'nodesDistribution.csv'
+    let matrix = []
+    let list = []
+    let test;
+
+    csv()
+      .fromFile(latencyMatrixPath)
+      .on('json', (jsonObj) => {
+        let obj = {}
+        let country = jsonObj['from/to']
+        delete jsonObj['from/to']
+        obj[country] = jsonObj
+        matrix.push(obj)
+      })
+
+    csv({
+        noheader: true
+      })
+      .fromFile(nodesDistribution)
+      .on('json', (jsonObj) => {
+        list.push(jsonObj)
+      })
+      .on('done', (error) => {
+        var fData = list.map(function(item) {
+          return [item.field1, Math.ceil(item.field2)]
+        })
+        test = new WeightedList(fData)
+      })
+
+  })
+
+  // TESTING
+
+  .command('test', 'test')
+  .action(async(args, options, logger) => {
+
+    await setupAnalysisEnvironment()
+    await processLogData()
+
+  })
+
+async function setupAnalysisEnvironment() {
+  const pathToNetwork = os.homedir() + '/Network/Nodes'
+  const nodes = await getAllNodes()
+  let tails = []
+  let index = 0
+
+  db.serialize(function() {
+    db.run("DROP TABLE IF EXISTS BlockSent")
+    db.run("DROP TABLE IF EXISTS BlockReceived")
+    db.run("CREATE TABLE BlockSent(blockhash TEXT,minerId INTEGER, timestamp TEXT, nOfTx INTEGER, blockSize DOUBLE, interval DOUBLE)")
+    db.run("CREATE TABLE BlockReceived(blockhash TEXT, minerId INTEGER, timestamp TEXT)")
   })
 }
 
-function getCoinbase(fullTxList) {
-  return fullTxList.shift()
+async function processLogData() {
+  const nodes = await getAllNodes()
+  let res = await Promise.all(nodes.map(async(node) => await saveData(node))) // complimentato da MR. Scibona
+}
+
+async function saveData(node) {
+  let copySizes = blockSizes.slice()
+  let copyInterval = intervals.slice()
+  const pathToNetwork = os.homedir() + '/Network/Nodes'
+  lr = new LineByLineReader(pathToNetwork + '/' + node.id + '/debug.log')
+  let nextLine = false
+  let hashes = []
+
+  lr.on('error', function(err) {
+    console.log("scoppiato tutto pddc");
+  })
+
+  lr.on('line', async function(line) {
+
+    // lo schifo
+    if (nextLine) {
+      nextLine = false
+      let first = line.split(' ')[0] + ' '
+      let second = line.split(' ')[1]
+      const timestamp = first.concat(second)
+      const hash = line.split(' ')[4]
+      const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblock', hash)
+      newBlockIsSent(line.split(' ')[4], node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift())
+    }
+
+    if (line.includes('Successfully reconstructed block')) {
+      let first = line.split(' ')[0] + ' '
+      let second = line.split(' ')[1]
+      const timestamp = first.concat(second)
+      const hash = line.split(' ')[5]
+      if (!hashes.includes(hash)) {
+        hashes.push(hash)
+        newBlockIsArrived(hash, node.id, timestamp)
+      }
+    }
+
+    if (line.includes('Requesting block')) {
+      let first = line.split(' ')[0] + ' '
+      let second = line.split(' ')[1]
+      const timestamp = first.concat(second)
+      const hash = line.split(' ')[4]
+      if (!hashes.includes(hash)) {
+        hashes.push(hash)
+        newBlockIsArrived(hash, node.id, timestamp)
+      }
+    }
+
+    if (line.includes('method=submitblock')) {
+      nextLine = true
+    }
+
+  })
+}
+
+function newBlockIsSent(hash, minerId, timestamp, nOfTxs, blocksize, interval) {
+  let stmt = db.prepare("INSERT INTO BlockSent VALUES (?, ?, ?, ?, ?, ?)")
+  stmt.run(hash, minerId, timestamp, nOfTxs, blocksize, interval)
+  stmt.finalize()
+}
+
+function newBlockIsArrived(hash, minerId, timestamp) {
+  let stmt = db.prepare("INSERT INTO BlockReceived VALUES (?, ?, ?)")
+  stmt.run(hash, minerId, timestamp)
+  stmt.finalize()
+}
+
+async function nodesRestartingCrashing(restartProbability, crashProbability) {
+  const nodes = await getAllActiveNodeInfo()
+  const nodesId = nodes.map(node => node.id)
+  const nOfNodes = await sendQuery('SELECT COALESCE(MAX(id), 0) as nOfNodes FROM Node')
+
+  for (var i = 0; i < nOfNodes; i++) {
+    if (nodesId.includes(i) && nodeWillCrash(crashProbability)) {
+      await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'stop')
+      await turnNodeOnOff(node.id, 0)
+      debug('nodeWillCrash', node.id)
+    } else if (nodeWillRestart(restartProbability)) {
+      await run(node.bitcoind + ' -minrelaytxfee=0.0' + ' -limitancestorcount=100' + ' -limitancestorsize=1000' + ' -limitdescendantcount=100' + ' -limitdescendantsize=1000' + ' -blockmaxsize=1000000' + ' -blockmintxfee=0.0')
+      await turnNodeOnOff(node.id, 1)
+      debug('nodeWillRestart', node.id)
+    }
+  }
+}
+
+async function buildMinerList(nOfOrphans) {
+  let minerListId = []
+  let hashingPowerNodes = await buildHashingPowerList()
+  const nodeId = minerListId.push(getNextMiner(hashingPowerNodes))
+  for (var i = 0; i < nOfOrphans; i++) {
+    minerListId.push(getNextMiner(hashingPowerNodes))
+  }
+  return minerListId
+}
+
+async function mineBlock(nodes, address, coinbase, sequence, mineflag, blocksize) {
+  blocksize = Math.trunc(blocksize * 1000000)
+  let miners = await Promise.all(nodes.map(async(node) => await getNodeInfo(node)))
+  if (mineflag) {
+    const res = await Promise.all(miners.map(async(miner) => await mine(miner.rpcusername, miner.rpcpassword, miner.rpcport, address, coinbase, sequence, blocksize)))
+    return res[0].stdout.replace(/\W+/g, " ").trim().split(' ')
+  } else {
+    miners.map(miner => console.log('python src/ntgbtminer.py ' + miner.rpcport + ' ' + miner.rpcusername + ' ' + miner.rpcpassword + ' ' + address + ' ' + coinbase + ' ' + sequence))
+  }
+}
+
+function mine(username, password, rpcport, address, coinbase, sequence, blocksize) {
+  debug('blocksize', blocksize)
+  const shell_cmd = 'python src/ntgbtminer.py ' + rpcport + ' ' + username + ' ' + password + ' ' + address + ' ' + coinbase + ' ' + sequence + ' ' + blocksize
+  return run(shell_cmd, {
+    echoCommand: false,
+    captureOutput: true
+  })
+}
+
+async function getMempoolInfo(type) {
+  const nodes = await getAllActiveNodeInfo()
+  let nodesMempool = [];
+
+  for (node of nodes) {
+    try {
+      let test = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
+      nodesMempool.push(test)
+    } catch (err) {
+      console.log(err);
+    }
+  }
+  let bytes = nodesMempool.map(m => m.data.result.bytes)
+
+  return (type == 'max') ? Math.max(...bytes) / 1000000 : Math.min(...bytes) / 1000000
+}
+
+async function updateMempoolTxs(minerId) {
+  const node = await sendQuery('SELECT * FROM Node WHERE id = ' + minerId[0])
+  const actualMempool = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
+
+  return actualMempool.data.result.bytes / 1000000
+}
+
+async function allNodesAreTxSynched() {
+  const nodes = await getAllActiveNodeInfo()
+  let promises = []
+  for (node of nodes) {
+    // debug('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
+    console.log('MAYBE ERROR:', '127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
+    promises.push(sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo'))
+  }
+  let res;
+  try {
+    res = (await Promise.all(promises)).map(e => e.data.result)
+  } catch (err) {
+    console.log('allNodesAreTxSynched', err);
+  }
+  return res.every(x => Object.is(res[0].size, x.size))
+}
+
+async function allNodesAreBlkSynched() {
+  const nodes = await getAllActiveNodeInfo()
+  let promises = []
+  for (node of nodes) {
+    promises.push(sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblockcount'))
+  }
+  let res;
+  try {
+    res = (await Promise.all(promises)).map(e => e.data.result)
+  } catch (err) {
+    console.log(err);
+  }
+  return res.every(x => Object.is(res[0], x))
+}
+
+async function getCoinbase(master, txList, coinbases) {
+  const cb = await sendRpcRequest(master.ip, master.rpcport, master.rpcusername, master.rpcpassword, 'getrawtransaction', txList.shift(), true)
+  coinbases.push({
+    address: cb.data.result.vout[0].scriptPubKey.addresses[0],
+    coinbase: cb.data.result.vin[0].coinbase,
+    sequence: cb.data.result.vin[0].sequence
+  })
 }
 
 async function buildHashingPowerList() {
@@ -392,11 +862,11 @@ async function buildHashingPowerList() {
 }
 
 function getNextInterval(interval) {
-  return marsagliaPolarMethod(interval, 8)
+  return marsagliaPolarMethod(interval, 20)
 }
 
 function getNextBlockSize(size) {
-  return marsagliaPolarMethod(interval, 8)
+  return marsagliaPolarMethod(size, 25) / 1000
 }
 
 function nodeWillCrash(probability) {
@@ -410,73 +880,23 @@ function nodeWillRestart(probability) {
 async function getNextHeight() {
   const node = await sendQuery('SELECT * FROM Node WHERE id = 0')
   const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblockcount')
-  return res.data.result
+  return res.data.result + 1
 }
 
 async function buildFullTransaction(txList) {
-  const limit = promiseLimit(16)
+  const limit = promiseLimit(1)
   return new Promise(function(resolve, reject) {
     Promise.all(txList.map((tx) => {
-      return limit(() => getTransactionByTxId(tx))
-    })).then(fullTxList => {
-      let sums = fullTxList.reduce(function(r, c, i) { r.push((r[i-1] || 0) + c.size); return r }, [] );
-      let result = sums.map(function(val, index) { return { size: val, hex: fullTxList[index].hex } });
-      resolve(result)
-    })
-    .catch(err => reject(err))
-  })
-}
-
-function send(fullTxList) {
-  return new Promise(function(resolve, reject) {
-
-  })
-}
-
-async function sendTxs(fullTxList, size) {
-  let maxSize = size * 1000
-  let nOfTxSent = 0
-  const row = await sendQuery('SELECT COALESCE(MAX(id), 0) as nOfNodes FROM Node')
-  const limit = promiseLimit(16)
-
-  return new Promise(function(resolve, reject) {
-    Promise.all(fullTxList.map((tx) => {
-      return limit(() => sendTx(tx, maxSize))
-    })).then(results => resolve(console.log(results.length)))
-    .catch(err => reject(err))
-  })
-
-
-
-
-
-
-
-  // for (let tx of txList) {
-  //   try {
-  //     const node = await sendQuery('SELECT * FROM Node WHERE id = ' + getRandomArbitrary(0, row.nOfNodes))
-  //     console.log('Node ' + node.id + ' will send the tx ' + tx);
-  //     const { hex: txHex, size: txSize, vin: coinbase } = await getTransactionByTxId(master, tx)
-  //     // const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', txHex)
-  //     maxSize -= txSize
-  //     nOfTxSent++
-  //   } catch (ex) {
-  //     console.log(ex.response.data);
-  //   }
-  // }
-  // return nOfTxSent
-}
-
-async function sendTx(tx, maxSize) {
-  const row = await sendQuery('SELECT COALESCE(MAX(id), 0) as nOfNodes FROM Node')
-  const node = await sendQuery('SELECT * FROM Node WHERE id = ' + getRandomArbitrary(0, row.nOfNodes))
-  return new Promise(function(resolve, reject) {
-    if (tx.size < maxSize)
-      resolve(console.log('Node ' + node.id + ' will send the tx ' + tx + 'with total size of ' + tx.size));
-      // sendRpcRequest(node.ip, node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', tx.hex)
-      //   .then(res => resolve(res.data.result))
-      //   .catch(err => reject(err))
-    else resolve('Max size exceded.')
+        return limit(() => getTransactionByTxId(tx))
+      })).then(fullTxList => {
+        let sums = fullTxList.reduce(function(r, c, i) {
+          r.push((r[i - 1] || 0) + c.size);
+          return r
+        }, []);
+        // let result = sums.map(function(val, index) { return { size: val, hex: fullTxList[index].hex, txHash: fullTxList[index].hash } });
+        resolve(fullTxList)
+      })
+      .catch(err => reject(err))
   })
 }
 
@@ -489,16 +909,25 @@ async function getTransactionByTxId(txId) {
   return new Promise(function(resolve, reject) {
     sendRpcRequest(master.ip, master.rpcport, master.rpcusername, master.rpcpassword, 'getrawtransaction', txId, true)
       .then(res => {
-        resolve((({ hex, size }) => ({ hex, size }))(res.data.result))
+        resolve(res.data.result)
+        // resolve((({ hex, size, hash }) => ({ hex, size, hash }))(res.data.result))
       })
       .catch(err => reject(err))
   })
 }
 
+function debug(key, value) {
+  console.log(key + ': ' + value);
+}
+
+function getMaxSize(mempool) {
+  return mempool.size[mempool.length - 1]
+}
+
 function getNextBlockFromMaster(master, currentHeight, isHex) {
-  const height = ++currentHeight
+  debug('getNextBlockFromMaster - height', currentHeight)
   return new Promise(function(resolve, reject) {
-    sendRpcRequest(master.ip, master.rpcport, master.rpcusername, master.rpcpassword, 'getblockhash', height.toString())
+    sendRpcRequest(master.ip, master.rpcport, master.rpcusername, master.rpcpassword, 'getblockhash', currentHeight.toString())
       .then(res => {
         return sendRpcRequest(master.ip, master.rpcport, master.rpcusername, master.rpcpassword, 'getblock', res.data.result, isHex)
       })
@@ -651,7 +1080,7 @@ function normalizeParams(params) {
       if (!isNaN(a) && typeof(a) !== "boolean") {
         return r.concat(parseInt(a))
       }
-      return _.uniq(params)
+      return _.uniq(_.flattenDeep((params)))
     }, []) : []
 }
 
@@ -666,27 +1095,50 @@ function getNextMiner(weightedList) {
   return weightedList.pop()[0]
 }
 
-function isOrphanGenerated() {
-  probabilitiesOrphans = JSON.parse(require('fs').readFileSync('orphan.conf', 'utf8'))
-  const wl = new WeightedList(Object.entries(probabilitiesOrphans))
-  return wl.peek()[0]
+function areOrphansGenerated(blockSize, interval, difficulty, none) {
+  if (!none)
+    return 0
+
+  const orph1 = scientificToDecimal(1.766e-01) +
+    (difficulty * (-1 * scientificToDecimal(5.988e-13))) +
+    (blockSize * scientificToDecimal(2.067e-01)) +
+    (interval * scientificToDecimal(3.231e-03));
+
+  const orph2 = scientificToDecimal(1.348e-01) +
+    (difficulty * (-1 * scientificToDecimal(3.453e-14))) +
+    (blockSize * (-1 * scientificToDecimal(2.552e-02))) +
+    (interval * (-1 * scientificToDecimal(5.835e-03)));
+
+  const random = Math.random();
+
+  if (random < orph2)
+    return 2
+  else if (random < orph1)
+    return 1
+  else return 0
+
 }
 
-function mineBlock(port, username, password) {
-  return new Promise(function(resolve, reject) {
-    run('python src/ntgbtminer.py ' + port + ' ' + username + ' ' + password, {
-        echoCommand: false,
-        captureOutput: true
-      })
-      .then(res => {
-        console.log(port + ': ' + process.hrtime())
-        resolve(res.stdout.trim())
-      })
-      .catch(err => {
-        reject(err.message)
-      })
-  })
-}
+function scientificToDecimal(num) {
+  //if the number is in scientific notation remove it
+  if (/\d+\.?\d*e[\+\-]*\d+/i.test(num)) {
+    var zero = '0',
+      parts = String(num).toLowerCase().split('e'), //split into coeff and exponent
+      e = parts.pop(), //store the exponential part
+      l = Math.abs(e), //get the number of zeros
+      sign = e / l,
+      coeff_array = parts[0].split('.');
+    if (sign === -1) {
+      num = zero + '.' + new Array(l).join(zero) + coeff_array.join('');
+    } else {
+      var dec = coeff_array[1];
+      if (dec) l = l - dec.length;
+      num = coeff_array.join('') + new Array(l + 1).join(zero);
+    }
+  }
+
+  return num;
+};
 
 // send a request to one of the miner
 function sendRpcRequest(ip, port, user, password, method, ...params) {
@@ -708,9 +1160,11 @@ function sendRpcRequest(ip, port, user, password, method, ...params) {
           password: password
         }
       })
-      .then(res => resolve(res))
+      .then(res => {
+        resolve(res)
+      })
       .catch(err => {
-        console.log("Rpc error: " + err.response.data)
+        console.log("Rpc error: " + JSON.stringify(err.response.data))
         reject(err)
       })
   })
@@ -736,5 +1190,10 @@ function marsagliaPolarMethod(mean, stdDev) {
     return mean + stdDev * u * mul;
   }
 }
+
+process.on('unhandledRejection', error => {
+  // Will print "unhandledRejection err is not defined"
+  console.log('unhandledRejection', error.message);
+});
 
 prog.parse(process.argv);
