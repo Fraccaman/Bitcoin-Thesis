@@ -23,6 +23,7 @@
     "bluebird": "^3.5.0",
     "caporal": "^0.4.1",
     "crypto": "^0.0.3",
+    "csv-load-sync": "^1.0.0",
     "csvtojson": "^1.1.5",
     "decompress": "^4.1.0",
     "find-remove": "^1.0.1",

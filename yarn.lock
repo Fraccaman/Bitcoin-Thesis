@@ -435,6 +435,10 @@ chalk@~0.4.0:
     has-color "~0.1.0"
     strip-ansi "~0.1.0"
 
+check-more-types@^2.10.0:
+  version "2.24.0"
+  resolved "https://registry.yarnpkg.com/check-more-types/-/check-more-types-2.24.0.tgz#1420ffb10fd444dcfc79b43891bbfffd32a84600"
+
 chownr@~1.0.1:
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/chownr/-/chownr-1.0.1.tgz#e2a75042a9551908bebd25b8523d5f9769d79181"
@@ -738,6 +742,12 @@ crypto@^0.0.3:
 csscolorparser@^1.0.2, csscolorparser@~1.0.2:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/csscolorparser/-/csscolorparser-1.0.3.tgz#b34f391eea4da8f3e98231e2ccd8df9c041f171b"
+
+csv-load-sync@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/csv-load-sync/-/csv-load-sync-1.0.0.tgz#5285ca993ae0727808f717da6f4362b1b6214205"
+  dependencies:
+    check-more-types "^2.10.0"
 
 csvtojson@^1.1.5:
   version "1.1.5"

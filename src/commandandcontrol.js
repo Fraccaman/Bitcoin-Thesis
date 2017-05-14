@@ -381,32 +381,7 @@ prog
     }
 
     if (options.hard) {
-      const pathToNetwork = os.homedir() + '/Network/Nodes'
-      const pathToBackup = os.homedir() + '/node_backup.zip'
-      const pathToUnzipedFiles = os.homedir() + '/test/'
-
-      const nodes = fs.readdirSync(pathToNetwork).filter(file => fs.statSync(path.join(pathToNetwork, file)).isDirectory())
-
-      for (node of nodes) {
-        const files = fs.readdirSync(pathToNetwork + '/' + node)
-        for (const file of files) {
-          if (file != 'bitcoin.conf') {
-            await fs.remove(path.join(pathToNetwork + '/' + node, file))
-          }
-        }
-        console.log('Done deleting node ' + node)
-        const backupFiles = fs.readdirSync(pathToUnzipedFiles + '/0')
-        for (const file of backupFiles) {
-          if (file != 'bitcoin.conf') {
-            try {
-              await fs.copy(pathToUnzipedFiles + '0/' + file, pathToNetwork + '/' + node + '/' + file)
-            } catch (e) {
-              console.log(e);
-            }
-          }
-        }
-        console.log('Done resetting node ' + node)
-      }
+      await run('python src/resetter.py')
     } else {
       const dirs = fs.readdirSync(os.homedir() + '/Network/Nodes').filter(file => fs.statSync(path.join(os.homedir() + '/Network/Nodes', file)).isDirectory())
       for (dir of dirs) {
@@ -477,21 +452,25 @@ prog
 
   .command('run', 'Run the framework with with specific paramter')
   .argument('<nOfBlocks>', 'Number of blocks to test the protocol with', prog.INT)
-  .argument('[height]', 'Custom height (testing) ', prog.INT)
-  .argument('[crash]', 'Probability that a node crash [0-1]', prog.INT, 0)
-  .argument('[restart]', 'Probability that a node restart from a shutdown [0-1]', prog.INT, 0)
   .argument('[blockSize]', 'Mean size of a block in kilobyte', prog.INT, 900)
   .argument('[interval]', 'Mean Interval between blocks creation in seconds', prog.INT, 562)
   .argument('[difficulty]', 'Difficulty', prog.INT, 0)
+  .argument('[height]', 'Custom height (testing) ', prog.INT)
+  .argument('[crash]', 'Probability that a node crash [0-1]', prog.INT, 0)
+  .argument('[restart]', 'Probability that a node restart from a shutdown [0-1]', prog.INT, 0)
   .argument('[rpcWorker]', 'Number of bitcoin rpc parallel handler', prog.INT, 16)
   .option('--alert', 'Alert on memory, cpu and disk usage (> 90%)')
   .option('--mine', 'If true, then mine the block', prog.BOOL, false)
   .option('--orphans', 'If true, orphans are generated', prog.BOOL, false)
   .option('--analysis', 'If true, data are saved to db', prog.BOOL, false)
+  .option('--latency', 'If true, latencies are set based on the zone', prog.BOOL, false)
   .action(async(args, options, logger) => {
 
     if (options.status) turnStatusAlert()
     if (!assertEnoughSpace()) process.exit(1)
+
+    if (options.latency)
+      await setLatencies()
 
     const master = await getMasterInfo()
     const node = await sendQuery('SELECT * FROM Node WHERE id = 0')
@@ -567,7 +546,7 @@ prog
         while (!(await allNodesAreTxSynched()) && index < 12) {
           console.log('Synchronizing ... cya @ 15')
           sleep.sleep(15)
-          ++index
+            ++index
         }
       } catch (err) {
         console.log('err', err);
@@ -612,8 +591,8 @@ prog
 
     const nodes = await getAllNodes()
 
-    const latencyMatrixPath = 'latencies.csv'
-    const nodesDistribution = 'nodesDistribution.csv'
+    const latencyMatrixPath = 'latencies.conf'
+    const nodesDistribution = 'nodesDistribution.conf'
     let matrix = []
     let list = []
     let test;
@@ -648,6 +627,8 @@ prog
 
   .command('test', 'test')
   .action(async(args, options, logger) => {
+
+    // await setLatencies()
 
     await setupAnalysisEnvironment()
     await processLogData()
@@ -693,6 +674,7 @@ async function saveData(node) {
       let first = line.split(' ')[0] + ' '
       let second = line.split(' ')[1]
       const timestamp = first.concat(second)
+      console.log(line);
       const hash = line.split(' ')[4]
       const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblock', hash)
       newBlockIsSent(line.split(' ')[4], node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift())
@@ -720,8 +702,15 @@ async function saveData(node) {
       }
     }
 
-    if (line.includes('method=submitblock')) {
-      nextLine = true
+    if (line.includes('Mined hash: ')) {
+      nextLine = false
+      let first = line.split(' ')[0] + ' '
+      let second = line.split(' ')[1]
+      const timestamp = first.concat(second)
+      console.log(line);
+      const hash = line.split(' ')[4]
+      const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblock', hash)
+      newBlockIsSent(line.split(' ')[4], node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift())
     }
 
   })
@@ -778,6 +767,46 @@ async function mineBlock(nodes, address, coinbase, sequence, mineflag, blocksize
   }
 }
 
+async function setLatencies() {
+  const latencyMatrixPath = 'latencies.conf'
+  const nodesDistribution = 'nodesDistribution.conf'
+  const nodes = await getAllNodes()
+  let matrix = []
+
+  csv()
+    .fromFile(latencyMatrixPath)
+    .on('json', (jsonObj) => {
+      let obj = {}
+      let country = jsonObj['from/to']
+      delete jsonObj['from/to']
+      obj[country] = jsonObj
+      matrix.push(obj)
+    })
+    .on('done', (error) => {
+      for (var i = 0; i < nodes.length; i++) {
+        let lat;
+        for (country of matrix) {
+          if (Object.keys(country)[0] == nodes[i].zone) {
+            lat = Object.values(country)
+          }
+        }
+        for (var j = 0; j < nodes.length; j++) {
+          if (i != j && nodes[i].zone != 'Unknown') {
+            let command;
+            if (nodes[j].zone == 'Unknown')
+              command = 'sudo tcset --device eth0 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+            else
+              command = 'sudo tcset --device eth0 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+            console.log(command);
+          } else {
+            let a = Math.floor(Math.random() * (500 - 0) + 0)
+            let command = 'sudo tcset --device eth0 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+          }
+        }
+      }
+    })
+}
+
 function mine(username, password, rpcport, address, coinbase, sequence, blocksize) {
   debug('blocksize', blocksize)
   const shell_cmd = 'python src/ntgbtminer.py ' + rpcport + ' ' + username + ' ' + password + ' ' + address + ' ' + coinbase + ' ' + sequence + ' ' + blocksize
@@ -816,7 +845,7 @@ async function allNodesAreTxSynched() {
   let promises = []
   for (node of nodes) {
     // debug('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
-    console.log('MAYBE ERROR:', '127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
+    // console.log('MAYBE ERROR:', '127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
     promises.push(sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo'))
   }
   let res;

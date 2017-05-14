@@ -77,27 +77,6 @@ class Timer():
     def show(cls):
         print "*** Elapsed: %0.5f" % cls.elapsed()
 
-#%% --- Single thread ----- #
-# Timer.start()
-# for i in range(0,len(folders)):
-#   removeAndCopy(home + '/Network/Nodes/' + str(i))
-# Timer.show()
-#
-#
-# #%% ------- 4 Pool ------- #
-# Timer.start()
-# pool = ThreadPool(5)
-# results = pool.map(removeAndCopy, folders)
-# Timer.show()
-#
-# #
-# # #%% ------- 8 Pool ------- #
-# Timer.start()
-# pool = ThreadPool(10)
-# results = pool.map(removeAndCopy, folders)
-# Timer.show()
-#
-# #%% ------- 13 Pool ------- #
 Timer.start()
 pool = ThreadPool(20)
 results = pool.map(removeAndCopy, folders)
