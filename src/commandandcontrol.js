@@ -440,6 +440,86 @@ prog
   })
 
   /**
+   * Emulate the real blocks
+   * @param {Int} nOfBlocks - required paramter describe on how many blocks the test should be done
+   */
+
+  .command('emulate', 'Run the framework with with specific paramter')
+  .argument('<nOfBlocks>', 'Number of blocks to test the protocol with', prog.INT)
+  .action(async(args, options, logger) => {
+
+    const master = await getMasterInfo()
+    const node = await sendQuery('SELECT * FROM Node WHERE id = 0')
+
+    let coinbases = []
+    let nextHeight = await getNextHeight()
+
+    debug('nextHeight', nextHeight)
+    debug('args.nOfBlocks', args.nOfBlocks)
+
+    console.log("Starting with blocks...");
+
+    for (let k = 0; k < args.nOfBlocks; k++) {
+
+      const {
+        tx: txList
+      } = await getNextBlockFromMaster(master, nextHeight, true)
+      debug('txList size before coinbase', txList.length)
+
+      await getCoinbase(master, txList, coinbases)
+      debug('txList size after coinbase', txList.length)
+
+      const fullTxList = await buildFullTransaction(txList)
+      debug('fullTxList size', fullTxList.length)
+      debug('coinbases size', coinbases.length)
+
+      for (var i = 0; i < fullTxList.length; i++) {
+        try {
+          await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', fullTxList[i].hex)
+        } catch (e) {
+          debug('Error:', e)
+        }
+      }
+
+      const minerList = await buildMinerList(0)
+      debug('minerList length', minerList.length)
+      const coinbaseNextBlock = coinbases.shift()
+      debug('coinbase', coinbaseNextBlock.address)
+
+      try {
+        while (!(await allNodesAreTxSynched())) {
+          console.log('Synchronizing ... cya @ 15')
+          sleep.sleep(15)
+        }
+      } catch (err) {
+        console.log('err', err);
+      }
+
+      nextHeight++
+
+      console.log('Start mining ...');
+
+      sleep.sleep(2)
+
+      const res = await mineBlock(minerList, coinbaseNextBlock.address, coinbaseNextBlock.coinbase, coinbaseNextBlock.sequence, true, 2)
+
+      console.log('Finished mining ...');
+
+      sleep.sleep(2)
+
+      console.log(' ------- END CYCLE ' + k + '-------');
+
+    }
+
+    while (!(await allNodesAreBlkSynched())) {
+      console.log('Synchronizing ... cya @ 5s')
+      sleep.sleep(5)
+    }
+
+  })
+
+
+  /**
    * Start collecting data with different protocol / network settings
    * @param {Int} nOfBlocks - required paramter describe on how many blocks the test should be done
    * @param {Int} blockSize - optional paramter describe the block size
@@ -458,7 +538,6 @@ prog
   .argument('[height]', 'Custom height (testing) ', prog.INT)
   .argument('[crash]', 'Probability that a node crash [0-1]', prog.INT, 0)
   .argument('[restart]', 'Probability that a node restart from a shutdown [0-1]', prog.INT, 0)
-  .argument('[rpcWorker]', 'Number of bitcoin rpc parallel handler', prog.INT, 16)
   .option('--alert', 'Alert on memory, cpu and disk usage (> 90%)')
   .option('--mine', 'If true, then mine the block', prog.BOOL, false)
   .option('--orphans', 'If true, orphans are generated', prog.BOOL, false)

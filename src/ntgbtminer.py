@@ -15,6 +15,7 @@ import random
 import time
 import sys
 import datetime
+import copy
 
 # JSON-HTTP RPC Configuration
 # This will be particular to your local ~/.bitcoin/bitcoin.conf
@@ -167,7 +168,13 @@ def encode_coinbase_height(n, min_size = 1):
 def tx_make_coinbase(coinbase_script, address, value, height, sequence):
     # See https://en.bitcoin.it/wiki/Transaction
 
-    coinbase_script = bin2hex(encode_coinbase_height(height)) + coinbase_script
+    # print(height, bin2hex(encode_coinbase_height(height)))
+
+    # cb_noheight = copy.deepcopy(coinbase_script)
+
+    # coinbase_script = bin2hex(encode_coinbase_height(height)) + coinbase_script
+
+    # print('asd', cb_noheight)
 
     # Create a pubkey script
     # OP_DUP OP_HASH160 <len to push> <pubkey> OP_EQUALVERIFY OP_CHECKSIG
@@ -369,6 +376,11 @@ def block_make_submit(block):
 def block_mine(block_template, cb_script, extranonce_start, address, sequence, timeout=False, debugnonce_start=False):
     # Add an empty coinbase transaction to the block template
     coinbase_tx = {}
+
+    print(block_template['transactions'].pop(0))
+
+    # print('test', len(block_template['transactions']))
+
     block_template['transactions'].insert(0, coinbase_tx)
     # Add a nonce initialized to zero to the block template
     block_template['nonce'] = 0
@@ -389,9 +401,12 @@ def block_mine(block_template, cb_script, extranonce_start, address, sequence, t
         # Update the coinbase transaction with the extra nonce
         coinbase_script = cb_script
         coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'], block_template['height'], sequence)
-        # coinbase_tx['hash'] = tx_compute_hash(coinbase_tx['data'])
-        coinbase_tx['hash'] = 'c127cd37dfce1729564f462baebdd5fc7ca673182b8ae8ed44ad586dd8b23c4b'
-        coinbase_tx['hash'] = ''.join(['f' for i in range(len(coinbase_tx['hash']))])
+        coinbase_tx['hash'] = tx_compute_hash(coinbase_tx['data'])
+
+
+        # print('cb', coinbase_tx['data'])
+        # print('test0', block_template['coinbasevalue'])
+        # print('test1', coinbase_tx['hash'])
 
         # print(coinbase_tx)
 
