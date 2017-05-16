@@ -44,3 +44,9 @@ data*.js
 
 # csv files
 *.csv
+*.m
+*.png
+stats/data/.Rhistory
+ne.R
+stats/data/.RData
+src/test.js
