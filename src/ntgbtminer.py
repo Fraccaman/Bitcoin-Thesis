@@ -168,22 +168,9 @@ def encode_coinbase_height(n, min_size = 1):
 def tx_make_coinbase(coinbase_script, address, value, height, sequence):
     # See https://en.bitcoin.it/wiki/Transaction
 
-    # print(height, bin2hex(encode_coinbase_height(height)))
-
-    # cb_noheight = copy.deepcopy(coinbase_script)
-
-    # coinbase_script = bin2hex(encode_coinbase_height(height)) + coinbase_script
-
-    # print('asd', cb_noheight)
-
     # Create a pubkey script
     # OP_DUP OP_HASH160 <len to push> <pubkey> OP_EQUALVERIFY OP_CHECKSIG
     pubkey_script = "76" + "a9" + "14" + bitcoinaddress2hash160(address) + "88" + "ac"
-
-    # print('cb_script', coinbase_script)
-    # print('hash160', bitcoinaddress2hash160(address))
-    # print('value', value, int2lehex(value, 8))
-    # print('test', int(sequence), hex(int(sequence))[2:].zfill(8))
 
     tx = ''
     # version
@@ -231,7 +218,6 @@ def tx_compute_hash(tx):
 #
 # Returns a SHA256 double hash in big endian ASCII Hex
 def tx_compute_merkle_root(tx_hashes):
-    # print('check if coinbase hash', tx_hashes[0])
     # Convert each hash into a binary string
     for i in range(len(tx_hashes)):
         # Reverse the hash from big endian to little endian
@@ -341,8 +327,6 @@ def block_check_target_original(block_hash, target_hash):
 # Returns block in ASCII Hex submit format
 def block_make_submit(block):
 
-    # print(block)
-
     subm = ""
 
     # Block header
@@ -377,10 +361,6 @@ def block_mine(block_template, cb_script, extranonce_start, address, sequence, t
     # Add an empty coinbase transaction to the block template
     coinbase_tx = {}
 
-    print(block_template['transactions'].pop(0))
-
-    # print('test', len(block_template['transactions']))
-
     block_template['transactions'].insert(0, coinbase_tx)
     # Add a nonce initialized to zero to the block template
     block_template['nonce'] = 0
@@ -403,13 +383,6 @@ def block_mine(block_template, cb_script, extranonce_start, address, sequence, t
         coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'], block_template['height'], sequence)
         coinbase_tx['hash'] = tx_compute_hash(coinbase_tx['data'])
 
-
-        # print('cb', coinbase_tx['data'])
-        # print('test0', block_template['coinbasevalue'])
-        # print('test1', coinbase_tx['hash'])
-
-        # print(coinbase_tx)
-
         # Recompute the merkle root
         tx_hashes = [tx['hash'] for tx in block_template['transactions']]
         block_template['merkleroot'] = tx_compute_merkle_root(tx_hashes)
@@ -418,8 +391,6 @@ def block_mine(block_template, cb_script, extranonce_start, address, sequence, t
         block_header = block_form_header(block_template)
 
         time_stamp = time.clock()
-
-        # print('coinbase_tx_hash', coinbase_tx['hash'])
 
         # Loop through the nonce
         nonce = random.randint(1,100) if debugnonce_start == False else debugnonce_start
@@ -461,7 +432,6 @@ def block_mine(block_template, cb_script, extranonce_start, address, sequence, t
 def standalone_miner(coinbase_message, address):
     # while True:
     if len(sys.argv) < 3:
-        # print('Args must be 3')
         sys.exit(0)
 
     global RPC_URL
