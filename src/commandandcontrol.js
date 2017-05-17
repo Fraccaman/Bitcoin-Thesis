@@ -1025,7 +1025,8 @@ async function getTransactionByTxId(txId) {
 }
 
 function debug(key, value) {
-  console.log(key + ': ' + value);
+  if(false)
+    console.log(key + ': ' + value);
 }
 
 function getMaxSize(mempool) {
