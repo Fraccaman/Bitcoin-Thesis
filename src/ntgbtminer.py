@@ -186,8 +186,8 @@ def tx_make_coinbase(coinbase_script, address, value, height, sequence):
     # input[0] script
     tx += coinbase_script
     # input[0] seqnum
-    # tx += hex(int(sequence))[2:].zfill(8)
-    tx += sequence
+    a = hex(int(sequence))[2:].zfill(8)
+    tx += a[6] + a[7] + a[4] + a[5] + a[2] + a[3] + a[1] + a[0]
     # out-counter
     tx += "01"
     # output[0] value (little endian)
