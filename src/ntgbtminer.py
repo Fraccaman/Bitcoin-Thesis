@@ -361,6 +361,8 @@ def block_mine(block_template, cb_script, extranonce_start, address, sequence, t
     # Add an empty coinbase transaction to the block template
     coinbase_tx = {}
 
+    block_template['transactions'].pop(0)
+
     block_template['transactions'].insert(0, coinbase_tx)
     # Add a nonce initialized to zero to the block template
     block_template['nonce'] = 0
