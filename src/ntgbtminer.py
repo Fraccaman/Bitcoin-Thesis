@@ -165,7 +165,7 @@ def encode_coinbase_height(n, min_size = 1):
 #       value:              (unsigned int) value
 #
 # Returns transaction data in ASCII Hex
-def tx_make_coinbase(coinbase_script, address, value, height, sequence):
+def tx_make_coinbase(coinbase_script, address, value, height, sequence, locktime):
     # See https://en.bitcoin.it/wiki/Transaction
 
     # Create a pubkey script
@@ -187,7 +187,7 @@ def tx_make_coinbase(coinbase_script, address, value, height, sequence):
     tx += coinbase_script
     # input[0] seqnum
     a = hex(int(sequence))[2:].zfill(8)
-    tx += a[6] + a[7] + a[4] + a[5] + a[2] + a[3] + a[1] + a[0]
+    tx += a[6] + a[7] + a[4] + a[5] + a[2] + a[3] + a[0] + a[1]
     # out-counter
     tx += "01"
     # output[0] value (little endian)
@@ -197,7 +197,8 @@ def tx_make_coinbase(coinbase_script, address, value, height, sequence):
     # output[0] script
     tx += pubkey_script
     # lock-time
-    tx += "00000000"
+    l = hex(int(locktime))[2:].zfill(8)
+    tx += l[6] + l[7] + l[4] + l[5] + l[2] + l[3] + l[0] + l[1]
 
     return tx
 
@@ -358,7 +359,7 @@ def block_make_submit(block):
 #
 # Returns tuple of (solved block, hashes per second) on finding a solution,
 # or (None, hashes per second) on timeout or nonce exhaustion.
-def block_mine(block_template, cb_script, extranonce_start, address, sequence, timeout=False, debugnonce_start=False):
+def block_mine(block_template, cb_script, extranonce_start, address, sequence, locktime, timeout=False, debugnonce_start=False):
     # Add an empty coinbase transaction to the block template
     coinbase_tx = {}
 
@@ -449,7 +450,7 @@ def standalone_miner(coinbase_message, address):
     if (len(sys.argv) > 7):
         blocksize = int(sys.argv[7])
 
-    mined_block, hps = block_mine(rpc_getblocktemplate(blocksize), sys.argv[5], 0, sys.argv[4], sys.argv[6], timeout=60)
+    mined_block, hps = block_mine(rpc_getblocktemplate(blocksize), sys.argv[5], 0, sys.argv[4], sys.argv[6], sys.argv[8], timeout=60)
 
     if mined_block != None:
         print('{:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now()))

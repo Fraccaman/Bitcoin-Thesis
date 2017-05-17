@@ -501,7 +501,7 @@ prog
 
       sleep.sleep(2)
 
-      const res = await mineBlock(minerList, coinbaseNextBlock.address, coinbaseNextBlock.coinbase, coinbaseNextBlock.sequence, true, 2)
+      const res = await mineBlock(minerList, coinbaseNextBlock.address, coinbaseNextBlock.coinbase, coinbaseNextBlock.sequence, coinbaseNextBlock.locktime, true, 2)
 
       console.log('Finished mining ...');
 
@@ -835,11 +835,11 @@ async function buildMinerList(nOfOrphans) {
   return minerListId
 }
 
-async function mineBlock(nodes, address, coinbase, sequence, mineflag, blocksize) {
+async function mineBlock(nodes, address, coinbase, sequence, locktime, mineflag, blocksize) {
   blocksize = Math.trunc(blocksize * 1000000)
   let miners = await Promise.all(nodes.map(async(node) => await getNodeInfo(node)))
   if (mineflag) {
-    const res = await Promise.all(miners.map(async(miner) => await mine(miner.rpcusername, miner.rpcpassword, miner.rpcport, address, coinbase, sequence, blocksize)))
+    const res = await Promise.all(miners.map(async(miner) => await mine(miner.rpcusername, miner.rpcpassword, miner.rpcport, address, coinbase, sequence, locktime, blocksize)))
     return res[0].stdout.replace(/\W+/g, " ").trim().split(' ')
   } else {
     miners.map(miner => console.log('python src/ntgbtminer.py ' + miner.rpcport + ' ' + miner.rpcusername + ' ' + miner.rpcpassword + ' ' + address + ' ' + coinbase + ' ' + sequence))
@@ -886,9 +886,9 @@ async function setLatencies() {
     })
 }
 
-function mine(username, password, rpcport, address, coinbase, sequence, blocksize) {
+function mine(username, password, rpcport, address, coinbase, sequence, locktime, blocksize) {
   debug('blocksize', blocksize)
-  const shell_cmd = 'python src/ntgbtminer.py ' + rpcport + ' ' + username + ' ' + password + ' ' + address + ' ' + coinbase + ' ' + sequence + ' ' + blocksize
+  const shell_cmd = 'python src/ntgbtminer.py ' + rpcport + ' ' + username + ' ' + password + ' ' + address + ' ' + coinbase + ' ' + sequence + ' ' + blocksize + ' ' + locktime
   return run(shell_cmd, {
     echoCommand: false,
     captureOutput: true
@@ -956,7 +956,8 @@ async function getCoinbase(master, txList, coinbases) {
   coinbases.push({
     address: cb.data.result.vout[0].scriptPubKey.addresses[0],
     coinbase: cb.data.result.vin[0].coinbase,
-    sequence: cb.data.result.vin[0].sequence
+    sequence: cb.data.result.vin[0].sequence,
+    locktime: cb.data.result.locktime
   })
 }
 
