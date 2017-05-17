@@ -384,7 +384,7 @@ def block_mine(block_template, cb_script, extranonce_start, address, sequence, l
 
         # Update the coinbase transaction with the extra nonce
         coinbase_script = cb_script
-        coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'], block_template['height'], sequence)
+        coinbase_tx['data'] = tx_make_coinbase(coinbase_script, address, block_template['coinbasevalue'], block_template['height'], sequence, locktime)
         coinbase_tx['hash'] = tx_compute_hash(coinbase_tx['data'])
 
         # Recompute the merkle root
