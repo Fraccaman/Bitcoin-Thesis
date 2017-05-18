@@ -997,7 +997,6 @@ async function getTransactionByTxId(txId) {
 }
 
 function debug(key, value) {
-  if(false)
     console.log(key + ': ' + value);
 }
 
