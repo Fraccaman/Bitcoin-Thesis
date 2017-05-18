@@ -635,7 +635,7 @@ prog
 
       sleep.sleep(2)
 
-      const res = await mineBlock(minerList, coinbaseNextBlock.address, coinbaseNextBlock.coinbase, coinbaseNextBlock.sequence, options.mine, nextBlockSize)
+      const res = await mineBlock(minerList, coinbaseNextBlock.address, coinbaseNextBlock.coinbase, coinbaseNextBlock.sequence, coinbaseNextBlock.locktime, options.mine, nextBlockSize)
 
       console.log('Finished mining ...');
 
