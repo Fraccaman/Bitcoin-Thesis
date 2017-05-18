@@ -702,6 +702,7 @@ async function saveData(node) {
   let copySizes = blockSizes.slice()
   let copyInterval = intervals.slice()
   const pathToNetwork = os.homedir() + '/Network/Nodes'
+  debug('pathToNetwork', pathToNetwork)
   lr = new LineByLineReader(pathToNetwork + '/' + node.id + '/debug.log')
   let nextLine = false
   let hashes = []
