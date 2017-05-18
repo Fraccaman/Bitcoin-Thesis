@@ -851,6 +851,7 @@ async function setLatencies() {
             run(command).then(() => console.log(i))
           }
         }
+        console.log('Done ' + nodes[i].port);
       }
     })
 }
