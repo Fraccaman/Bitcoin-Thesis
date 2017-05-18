@@ -702,19 +702,15 @@ async function saveData(node) {
   let copySizes = blockSizes.slice()
   let copyInterval = intervals.slice()
   const pathToNetwork = os.homedir() + '/Network/Nodes'
-  debug('pathToNetwork', pathToNetwork)
   lr = new LineByLineReader(pathToNetwork + '/' + node.id + '/debug.log')
-  debug('lr', pathToNetwork + '/' + node.id + '/debug.log');
   let nextLine = false
   let hashes = []
 
   lr.on('error', function(err) {
-    console.log("scoppiato tutto pddc");
+    console.log("scoppiato tutto pddc", err);
   })
 
   lr.on('line', async function(line) {
-
-    debug('line', line);
 
     // lo schifo
     if (nextLine) {
@@ -750,7 +746,7 @@ async function saveData(node) {
       }
     }
 
-    if (line.includes('Mined hash: ')) {
+    if (line.includes('New Block has been mined: ')) {
       nextLine = false
       let first = line.split(' ')[0] + ' '
       let second = line.split(' ')[1]
