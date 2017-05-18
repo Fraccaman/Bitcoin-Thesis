@@ -838,16 +838,16 @@ async function setLatencies() {
           if (i != j && nodes[i].zone != 'Unknown') {
             let command;
             if (nodes[j].zone == 'Unknown') {
-              command = 'sudo tcset --device eth0 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+              command = 'sudo tcset --device em1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
               run(command).then(() => console.log(i))
             }
             else {
-              command = 'sudo tcset --device eth0 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+              command = 'sudo tcset --device em1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
               run(command).then(() => console.log(i))
             }
           } else {
             let a = Math.floor(Math.random() * (500 - 0) + 0)
-            let command = 'sudo tcset --device eth0 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+            let command = 'sudo tcset --device em1 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
             run(command).then(() => console.log(i))
           }
         }
