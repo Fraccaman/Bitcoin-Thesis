@@ -835,7 +835,7 @@ async function setLatencies() {
           }
         }
         for (var j = 0; j < nodes.length; j++) {
-          if (i != j && nodes[i].zone != 'Unknown') {
+          if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown') {
             let command;
             if (nodes[j].zone == 'Unknown') {
               command = 'sudo tcset --device em1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
