@@ -663,42 +663,7 @@ prog
   .argument('[latencies...]', 'Set Latencies')
   .action(async(args, options, logger) => {
 
-    // get all nodes
-    // assign to each a continent based on the nodes distribution (ZONE)
-
-    // set delay by watching the zone of that node to the zone of the other
-
-    const nodes = await getAllNodes()
-
-    const latencyMatrixPath = 'latencies.conf'
-    const nodesDistribution = 'nodesDistribution.conf'
-    let matrix = []
-    let list = []
-    let test;
-
-    csv()
-      .fromFile(latencyMatrixPath)
-      .on('json', (jsonObj) => {
-        let obj = {}
-        let country = jsonObj['from/to']
-        delete jsonObj['from/to']
-        obj[country] = jsonObj
-        matrix.push(obj)
-      })
-
-    csv({
-        noheader: true
-      })
-      .fromFile(nodesDistribution)
-      .on('json', (jsonObj) => {
-        list.push(jsonObj)
-      })
-      .on('done', (error) => {
-        var fData = list.map(function(item) {
-          return [item.field1, Math.ceil(item.field2)]
-        })
-        test = new WeightedList(fData)
-      })
+    await setLatencies()
 
   })
 
@@ -874,12 +839,14 @@ async function setLatencies() {
             let command;
             if (nodes[j].zone == 'Unknown')
               command = 'sudo tcset --device eth0 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+              await run(command)
             else
               command = 'sudo tcset --device eth0 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
-            console.log(command);
+              await run(command)
           } else {
             let a = Math.floor(Math.random() * (500 - 0) + 0)
             let command = 'sudo tcset --device eth0 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20'
+            await run(command)
           }
         }
       }
