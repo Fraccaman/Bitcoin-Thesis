@@ -752,9 +752,9 @@ async function saveData(node) {
       let second = line.split(' ')[1]
       const timestamp = first.concat(second)
       console.log(line);
-      const hash = line.split(' ')[4]
+      const hash = line.split(' ')[7]
       const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblock', hash)
-      newBlockIsSent(line.split(' ')[4], node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift())
+      newBlockIsSent(hash, node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift())
     }
 
   })
