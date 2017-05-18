@@ -846,9 +846,11 @@ async function setLatencies() {
               run(command).then(() => console.log(i))
             }
           } else {
-            let a = Math.floor(Math.random() * (500 - 0) + 0)
-            let command = 'sudo tcset --device em1 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
-            run(command).then(() => console.log(i))
+            if(nodes[i].port != nodes[j].port) {
+              let a = Math.floor(Math.random() * (500 - 0) + 0)
+              let command = 'sudo tcset --device em1 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
+              run(command).then(() => console.log(i))
+            }
           }
         }
         console.log('Done ' + nodes[i].port);
