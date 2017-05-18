@@ -704,6 +704,7 @@ async function saveData(node) {
   const pathToNetwork = os.homedir() + '/Network/Nodes'
   debug('pathToNetwork', pathToNetwork)
   lr = new LineByLineReader(pathToNetwork + '/' + node.id + '/debug.log')
+  debug('lr', pathToNetwork + '/' + node.id + '/debug.log');
   let nextLine = false
   let hashes = []
 
@@ -712,6 +713,8 @@ async function saveData(node) {
   })
 
   lr.on('line', async function(line) {
+
+    debug('line', line);
 
     // lo schifo
     if (nextLine) {
