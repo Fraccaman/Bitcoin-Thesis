@@ -3,6 +3,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 import time
 import shutil
 import os
+import pyfastcopy
 
 folders = []
 
@@ -34,7 +35,7 @@ def copytree(src, dst, symlinks=False, ignore=None, isRoot = True):
             elif os.path.isdir(srcname):
                 copytree(srcname, dstname, symlinks, ignore, False)
             else:
-                shutil.copyfileobj(srcname, dstname, 128*1024)
+                shutil.copyfile(srcname, dstname)
         except (IOError, os.error) as why:
             errors.append((srcname, dstname, str(why)))
         # catch the Error from the recursive copytree so that we can
