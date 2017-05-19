@@ -43,7 +43,7 @@ def copytree(src, dst, symlinks=False, ignore=None, isRoot = True):
             errors.extend(err.args[0])
 
 def removeAndCopy(path):
-  backup = os.path.expanduser("~") + '/test/0/'
+  backup = os.path.expanduser("~") + '/../bitcoinbackup/bitcoin/'
 
   for the_file in os.listdir(path):
     file_path = os.path.join(path, the_file)
