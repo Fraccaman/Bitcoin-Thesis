@@ -817,6 +817,8 @@ async function setLatencies() {
   const nodes = await getAllNodes()
   let matrix = []
 
+  let check = false
+
   csv()
     .fromFile(latencyMatrixPath)
     .on('json', (jsonObj) => {
@@ -838,7 +840,7 @@ async function setLatencies() {
           if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown') {
             let command;
             if (nodes[j].zone == 'Unknown') {
-              command = 'sudo tcset --device em1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
+              command = 'sudo tcset --device em1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + (check == true) ? '' : '--add'
               run(command).then(() => console.log(i))
             }
             else {
@@ -855,6 +857,7 @@ async function setLatencies() {
             }
           }
         }
+        check = true
         console.log('Done ' + nodes[i].port);
       }
     })
