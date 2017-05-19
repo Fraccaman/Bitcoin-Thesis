@@ -34,7 +34,7 @@ def copytree(src, dst, symlinks=False, ignore=None, isRoot = True):
             elif os.path.isdir(srcname):
                 copytree(srcname, dstname, symlinks, ignore, False)
             else:
-                _copyfileobj_patched(srcname, dstname)
+                shutil.copyfileobj(srcname, dstname, 128*1024)
         except (IOError, os.error) as why:
             errors.append((srcname, dstname, str(why)))
         # catch the Error from the recursive copytree so that we can
@@ -57,13 +57,13 @@ def removeAndCopy(path):
 
   copytree(backup, path)
 
-def _copyfileobj_patched(fsrc, fdst, length=32*1024*1024):
-    """Patches shutil method to hugely improve copy speed"""
-    while 1:
-        buf = fsrc.read(length)
-        if not buf:
-            break
-        fdst.write(buf)
+# def _copyfileobj_patched(fsrc, fdst, length=32*1024*1024):
+#     """Patches shutil method to hugely improve copy speed"""
+#     while 1:
+#         buf = fsrc.read(length)
+#         if not buf:
+#             break
+#         fdst.write(buf)
 
 
 class Timer():
@@ -81,7 +81,7 @@ class Timer():
         print "*** Elapsed: %0.5f" % cls.elapsed()
 
 Timer.start()
-shutil.copyfileobj = _copyfileobj_patched
+# shutil.copyfileobj = _copyfileobj_patched
 pool = ThreadPool(20)
 results = pool.map(removeAndCopy, folders)
 Timer.show()
