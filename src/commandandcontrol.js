@@ -841,19 +841,28 @@ async function setLatencies() {
             let command;
             if (nodes[j].zone == 'Unknown') {
               command = 'sudo tcset --device em1 --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + (check == true) ? '' : '--add'
-              run(command).then(() => console.log(i))
+              run(command,{
+                echoCommand: false,
+                captureOutput: false
+              }).then(() => console.log(i))
             }
             else {
               if(Math.floor(lat[0][nodes[j].zone]) != 0) {
                 command = 'sudo tcset --device em1 --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
-                run(command).then(() => console.log(i))
+                run(command,{
+                  echoCommand: false,
+                  captureOutput: false
+                }).then(() => console.log(i))
               }
             }
           } else {
             if(nodes[i].port != nodes[j].port) {
               let a = Math.floor(Math.random() * (500 - 0) + 0)
               let command = 'sudo tcset --device em1 --network 127.0.0.1 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
-              run(command).then(() => console.log(i))
+              run(command,{
+                echoCommand: false,
+                captureOutput: false
+              }).then(() => console.log(i))
             }
           }
         }
