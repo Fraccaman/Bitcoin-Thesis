@@ -146,14 +146,15 @@ function createConfig(path, id, options, node, probabilities, zone) {
   let already = []
   for (var i = 0; i <= Math.min(options.nodes, 8); i++) {
     if (i != id) {
-      if (options.nodes < 8)
+      if (options.nodes < 8) {
         writer.write('connect' + '=127.0.0.1:' + (options['port'] + i) + '\n')
-      else {
+      } else {
         let id = Math.floor(Math.random() * (options.nodes - 0) + 0)
         while (already.includes(id)) {
-          id = Math.floor(Math.random() * (options.nodes - 0) + 0)
           already.push(id)
+          id = Math.floor(Math.random() * (options.nodes - 0) + 0)
         }
+        already.push(id)
         writer.write('connect' + '=127.0.0.1:' + (options['port'] + id) + '\n')
       }
     }

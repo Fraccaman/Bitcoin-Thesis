@@ -24,6 +24,7 @@ const csv = require('csvtojson')
 let db = new sqlite3.cached.Database('nodes.sqlite')
 let blockSizes = []
 let intervals = []
+let orph = []
 
 prog
   .version('1.0.0')
@@ -534,7 +535,7 @@ prog
   .argument('<nOfBlocks>', 'Number of blocks to test the protocol with', prog.INT)
   .argument('[blockSize]', 'Mean size of a block in kilobyte', prog.INT, 900)
   .argument('[interval]', 'Mean Interval between blocks creation in seconds', prog.INT, 562)
-  .argument('[difficulty]', 'Difficulty', prog.INT, 0)
+  .argument('[difficulty]', 'Difficulty', prog.INT, 422170566883)
   .argument('[height]', 'Custom height (testing) ', prog.INT)
   .argument('[crash]', 'Probability that a node crash [0-1]', prog.INT, 0)
   .argument('[restart]', 'Probability that a node restart from a shutdown [0-1]', prog.INT, 0)
@@ -615,7 +616,8 @@ prog
       // TODO: add probability of orphan miner
       const nOfOrphans = areOrphansGenerated(nextBlockSize, nextInterval, args.difficulty, options.orphans)
       debug('nOfOrphans', nOfOrphans)
-      const minerList = await buildMinerList(nOfOrphans)
+      orph.push(nOfOrphans)
+      const minerList = await buildMinerList(0)
       debug('minerList length', minerList.length)
       const coinbaseNextBlock = coinbases.shift()
       debug('coinbase', coinbaseNextBlock.address)
@@ -625,7 +627,7 @@ prog
         while (!(await allNodesAreTxSynched()) && index < 12) {
           console.log('Synchronizing ... cya @ 15')
           sleep.sleep(15)
-            ++index
+          ++index
         }
       } catch (err) {
         console.log('err', err);
@@ -688,7 +690,7 @@ async function setupAnalysisEnvironment() {
   db.serialize(function() {
     db.run("DROP TABLE IF EXISTS BlockSent")
     db.run("DROP TABLE IF EXISTS BlockReceived")
-    db.run("CREATE TABLE BlockSent(blockhash TEXT,minerId INTEGER, timestamp TEXT, nOfTx INTEGER, blockSize DOUBLE, interval DOUBLE)")
+    db.run("CREATE TABLE BlockSent(blockhash TEXT,minerId INTEGER, timestamp TEXT, nOfTx INTEGER, blockSize DOUBLE, interval DOUBLE, orphans NUMBER)")
     db.run("CREATE TABLE BlockReceived(blockhash TEXT, minerId INTEGER, timestamp TEXT)")
   })
 }
@@ -754,7 +756,7 @@ async function saveData(node) {
       console.log(line);
       const hash = line.split(' ')[7]
       const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblock', hash)
-      newBlockIsSent(hash, node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift())
+      newBlockIsSent(hash, node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift(), orph.shift())
     }
 
   })

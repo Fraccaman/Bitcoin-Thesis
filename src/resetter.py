@@ -1,9 +1,12 @@
-import urllib2
 from multiprocessing.dummy import Pool as ThreadPool
 import time
 import shutil
 import os
-import pyfastcopy
+import zipfile
+try:
+  import pyfastcopy
+except Exception as e:
+  pass
 
 folders = []
 
@@ -44,7 +47,10 @@ def copytree(src, dst, symlinks=False, ignore=None, isRoot = True):
             errors.extend(err.args[0])
 
 def removeAndCopy(path):
+  print("Starting copy of " + str(path))
   backup = os.path.expanduser("~") + '/../bitcoinbackup/bitcoin/'
+  # backup = os.path.expanduser("~") + '/test/0/'
+  # backup_zip = os.path.expanduser("~") + '/test/0/Archive.zip'
 
   for the_file in os.listdir(path):
     file_path = os.path.join(path, the_file)
@@ -58,15 +64,6 @@ def removeAndCopy(path):
 
   copytree(backup, path)
 
-# def _copyfileobj_patched(fsrc, fdst, length=32*1024*1024):
-#     """Patches shutil method to hugely improve copy speed"""
-#     while 1:
-#         buf = fsrc.read(length)
-#         if not buf:
-#             break
-#         fdst.write(buf)
-
-
 class Timer():
 
     @classmethod
@@ -79,10 +76,9 @@ class Timer():
 
     @classmethod
     def show(cls):
-        print "*** Elapsed: %0.5f" % cls.elapsed()
+        print("*** Elapsed: %0.5f" % cls.elapsed())
 
 Timer.start()
-# shutil.copyfileobj = _copyfileobj_patched
 pool = ThreadPool(20)
 results = pool.map(removeAndCopy, folders)
 Timer.show()

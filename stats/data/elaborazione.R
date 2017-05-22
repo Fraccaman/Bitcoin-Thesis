@@ -25,8 +25,13 @@ names(interval) <- c("X1","X2")
 ggplot(interval, aes(x=as.POSIXct(X1), y=as.numeric(X2))) +
   geom_point()
 
+theme_set(theme_gray(base_size = 24))
+theme_update(plot.title = element_text(hjust = 0.5))
 ggplot(n_orphaned_blocks, aes(x=as.POSIXct(X1), y=as.numeric(X2))) +
-  geom_point()
+  geom_point() +
+  xlab("Number of orphan blocks") +
+  ylab("Days") +
+  ggtitle("Number of orphan blocks per day")
 
 interval$X1 <- paste(interval$X1, "00:00:00")
 interval$X1 <- as.POSIXct(interval$X1)
