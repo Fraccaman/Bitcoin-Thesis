@@ -38,7 +38,7 @@ def copytree(src, dst, symlinks=False, ignore=None, isRoot = True):
             elif os.path.isdir(srcname):
                 copytree(srcname, dstname, symlinks, ignore, False)
             else:
-                shutil.copyfile(srcname, dstname)
+                copyfile(srcname, dstname)
         except (IOError, os.error) as why:
             errors.append((srcname, dstname, str(why)))
         # catch the Error from the recursive copytree so that we can
@@ -114,7 +114,7 @@ def removeAndCopy(path):
     except Exception as e:
         print(e)
 
-  copytree2(backup, path)
+  copytree(backup, path)
 
 class Timer():
 
