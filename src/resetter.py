@@ -131,7 +131,7 @@ class Timer():
         print("*** Elapsed: %0.5f" % cls.elapsed())
 
 Timer.start()
-pool = ThreadPool(20)
+pool = ThreadPool(16)
 results = pool.map(removeAndCopy, folders)
 Timer.show()
 pool.close()

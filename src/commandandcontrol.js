@@ -705,7 +705,6 @@ async function saveData(node) {
   let copyInterval = intervals.slice()
   const pathToNetwork = os.homedir() + '/Network/Nodes'
   lr = new LineByLineReader(pathToNetwork + '/' + node.id + '/debug.log')
-  let nextLine = false
   let hashes = []
 
   lr.on('error', function(err) {
@@ -713,18 +712,6 @@ async function saveData(node) {
   })
 
   lr.on('line', async function(line) {
-
-    // lo schifo
-    if (nextLine) {
-      nextLine = false
-      let first = line.split(' ')[0] + ' '
-      let second = line.split(' ')[1]
-      const timestamp = first.concat(second)
-      console.log(line);
-      const hash = line.split(' ')[4]
-      const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblock', hash)
-      newBlockIsSent(line.split(' ')[4], node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift())
-    }
 
     if (line.includes('Successfully reconstructed block')) {
       let first = line.split(' ')[0] + ' '
@@ -762,9 +749,9 @@ async function saveData(node) {
   })
 }
 
-function newBlockIsSent(hash, minerId, timestamp, nOfTxs, blocksize, interval) {
-  let stmt = db.prepare("INSERT INTO BlockSent VALUES (?, ?, ?, ?, ?, ?)")
-  stmt.run(hash, minerId, timestamp, nOfTxs, blocksize, interval)
+function newBlockIsSent(hash, minerId, timestamp, nOfTxs, blocksize, interval, orph) {
+  let stmt = db.prepare("INSERT INTO BlockSent VALUES (?, ?, ?, ?, ?, ?, ?)")
+  stmt.run(hash, minerId, timestamp, nOfTxs, blocksize, interval, orph)
   stmt.finalize()
 }
 
