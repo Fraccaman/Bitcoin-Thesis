@@ -39,7 +39,7 @@ prog
     getAllDisabledNodeInfo()
       .then(res => {
         res.forEach(value => {
-          run(value.bitcoind + ' -minrelaytxfee=0.0' + ' -limitancestorcount=10000' + ' -limitancestorsize=500000' + ' -limitdescendantcount=10000' + ' -limitdescendantsize=10000' + ' -blockmaxsize=1000000' + ' -blockmintxfee=0.0' + ' -maxmempool=400' + (options.reindex ? ' --reindex' : ''), {
+          run(value.bitcoind + ' -minrelaytxfee=0.0' + ' -limitancestorcount=10000' + ' -limitancestorsize=500000' + ' -limitdescendantcount=10000' + ' -limitdescendantsize=10000' + ' -blockmaxsize=1000000' + ' -blockmintxfee=0.0' + ' -maxmempool=400' + ' -rpcthreads=8' + ' -rpcworkqueue=64' + (options.reindex ? ' --reindex' : ''), {
               echoCommand: false,
               captureOutput: true
             })
