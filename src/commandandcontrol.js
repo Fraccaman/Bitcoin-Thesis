@@ -830,7 +830,7 @@ async function setLatencies() {
             let commandOut;
             if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown' && nodes[j].zone != 'Unknown') {
               // console.log(nodes[i].zone);
-              commandIn = 'sudo tcset --device lo --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
+              commandIn = 'sudo tcset --device lo --delay ' + Math.floor(lat[0][nodes[j].zone] + 1)  + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
               console.log(1,commandIn);
               // run(commandIn,{
               //   echoCommand: false,
@@ -858,66 +858,6 @@ async function setLatencies() {
             }
           }
         }
-
-
-
-      // for (var j = 0; j < nodes.length; j++) {
-      //   let commandIn;
-      //   let commandOut;
-      //   if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown' && nodes[j].zone != 'Unknown') {
-      //     console.log(nodes[i].zone);
-      //     commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-      //     console.log(commandIn);
-      //     // run(commandIn,{
-      //     //   echoCommand: false,
-      //     //   captureOutput: false
-      //     // })
-      //   }
-      //   else {
-      //     if(nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
-      //       commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-      //       console.log(commandIn);
-      //       // run(commandIn,{
-      //       //   echoCommand: false,
-      //       //   captureOutput: false
-      //       // })
-      //     } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
-      //       commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-      //       console.log(commandIn);
-      //       // run(commandIn,{
-      //       //   echoCommand: false,
-      //       //   captureOutput: false
-      //       // })
-      //     } else {
-      //       // console.log('else');
-      //     }
-      //         if(Math.floor(lat[0][nodes[j].zone]) != 0) {
-      //           command = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
-      // //           // run(command,{
-      // //           //   echoCommand: false,
-      // //           //   captureOutput: false
-      // //           // }).then(() => console.log(i))
-      //           console.log(2, command);
-      //         }
-      //     }
-      //   }
-      //   check = false;
-      // }
-      //     } else {
-      //       if(nodes[i].port != nodes[j].port) {
-      //         let a = Math.floor(Math.random() * (500 - 0) + 0)
-      //         let command = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
-      //         console.log(3, command);
-      //         // run(command,{
-      //         //   echoCommand: false,
-      //         //   captureOutput: false
-      //         // }).then(() => console.log(i))
-      //       }
-      //     }
-      //   }
-      //   check = true
-      //   console.log('Done ' + nodes[i].port);
-      // })
     })
 }
 
