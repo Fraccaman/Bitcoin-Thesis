@@ -635,7 +635,7 @@ prog
 
       console.log('Setting latencies ...')
 
-      setLatencyBeforeBlock()
+      await setLatencyBeforeBlock()
 
       console.log('Start mining ...');
 
@@ -654,7 +654,7 @@ prog
 
       console.log('Unsetting latencies ...')
 
-      await unsetLatencyBeforeBlock()
+      unsetLatencyBeforeBlock()
 
       sleep.sleep(2)
 
