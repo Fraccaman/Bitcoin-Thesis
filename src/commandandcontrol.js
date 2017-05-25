@@ -549,8 +549,10 @@ prog
     if (options.status) turnStatusAlert()
     if (!assertEnoughSpace()) process.exit(1)
 
-    if (options.latency)
-      await setLatencies()
+    if (options.latency) {
+      await unsetLatencyBeforeBlock()
+      await setLatencyBeforeBlock()
+    }
 
     const master = await getMasterInfo()
     const node = await sendQuery('SELECT * FROM Node WHERE id = 0')
@@ -633,9 +635,9 @@ prog
         console.log('err', err);
       }
 
-      console.log('Setting latencies ...')
-
-      await setLatencyBeforeBlock()
+      // console.log('Setting latencies ...')
+      //
+      // await setLatencyBeforeBlock()
 
       console.log('Start mining ...');
 
@@ -654,13 +656,15 @@ prog
 
       console.log('Unsetting latencies ...')
 
-      unsetLatencyBeforeBlock()
+      // unsetLatencyBeforeBlock()
 
       sleep.sleep(2)
 
       console.log(' ------- END CYCLE ' + k + '-------');
 
     }
+
+    unsetLatencyBeforeBlock()
 
     if (options.analysis)
       await processLogData()
@@ -682,33 +686,7 @@ prog
   .command('test', 'test')
   .action(async(args, options, logger) => {
 
-    // await setLatencies()
-
-    // await setupAnalysisEnvironment()
-    // await processLogData()
-    //
-    // const home = os.homedir()
-    //
-    // lr = new LineByLineReader(home + '/Bitcoin-Thesis/late.txt')
-    //
-    // let counter = 0
-    //
-    // lr.on('error', function(err) {
-    //   console.log("scoppiato tutto pddc", err);
-    // })
-    //
-    // lr.on('line', function(line) {
-    //
-    //   console.log(counter++);
-    //
-    //   run(line,{
-    //     echoCommand: false,
-    //     captureOutput: true
-    //   })
-    //
-    //   sleep.sleep(2)
-    // })
-
+    await setLatencyBeforeBlock()
   })
 
 async function setupAnalysisEnvironment() {
@@ -744,7 +722,6 @@ async function setLatencyBeforeBlock() {
         captureOutput: true
       })
 
-      sleep.sleep(2)
     })
 
     lr.on('end', function() {
@@ -766,6 +743,9 @@ async function processLogData() {
 }
 
 async function saveData(node) {
+
+  console.log('is in');
+
   let copySizes = blockSizes.slice()
   let copyInterval = intervals.slice()
   const pathToNetwork = os.homedir() + '/Network/Nodes'
