@@ -626,12 +626,14 @@ prog
       try {
         while (!(await allNodesAreTxSynched()) && index < 12) {
           console.log('Synchronizing ... cya @ 15')
-          sleep.sleep(15)
+          sleep.sleep(20)
             ++index
         }
       } catch (err) {
         console.log('err', err);
       }
+
+      console.log('Setting latencies ...')
 
       setLatencyBeforeBlock()
 
@@ -649,6 +651,8 @@ prog
         console.log('Synchronizing ... cya @ 5s')
         sleep.sleep(5)
       }
+
+      console.log('Unsetting latencies ...')
 
       unsetLatencyBeforeBlock()
 
@@ -734,8 +738,6 @@ function setLatencyBeforeBlock() {
 
   lr.on('line', function(line) {
 
-    console.log('Setting latencies ...');
-
     run(line,{
       echoCommand: false,
       captureOutput: true
@@ -750,7 +752,6 @@ function unsetLatencyBeforeBlock() {
     echoCommand: false,
     captureOutput: true
   })
-  console.log('Latency unset!');
 }
 
 async function processLogData() {
