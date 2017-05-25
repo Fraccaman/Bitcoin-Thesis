@@ -834,7 +834,7 @@ async function setLatencies() {
               // console.log(1,commandIn);
               run(commandIn,{
                 echoCommand: false,
-                captureOutput: false
+                captureOutput: true
               })
             } else {
               if (nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
@@ -842,14 +842,14 @@ async function setLatencies() {
                 // console.log(2, commandIn);
                 run(commandIn,{
                   echoCommand: false,
-                  captureOutput: false
+                  captureOutput: true
                 })
               } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
                 commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
                 // console.log(3, commandIn);
                 run(commandIn,{
                   echoCommand: false,
-                  captureOutput: false
+                  captureOutput: true
                 })
               } else {
                 // console.log('else');
