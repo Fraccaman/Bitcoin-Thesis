@@ -722,6 +722,8 @@ async function setLatencyBeforeBlock() {
         captureOutput: true
       })
 
+      sleep.sleep(1)
+
     })
 
     lr.on('end', function() {
