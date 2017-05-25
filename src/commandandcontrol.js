@@ -728,7 +728,7 @@ async function setupAnalysisEnvironment() {
 function setLatencyBeforeBlock() {
   const home = os.homedir()
 
-  lr = new LineByLineReader(home + '/Bitcoin-Thesis/late.txt')
+  lr = new LineByLineReader(home + '/Bitcoin-Thesis/json.json')
 
   let counter = 0
 
