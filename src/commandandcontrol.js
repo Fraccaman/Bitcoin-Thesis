@@ -831,26 +831,26 @@ async function setLatencies() {
             if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown' && nodes[j].zone != 'Unknown') {
               // console.log(nodes[i].zone);
               commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-              console.log(1,commandIn);
-              // run(commandIn,{
-              //   echoCommand: false,
-              //   captureOutput: false
-              // })
+              // console.log(1,commandIn);
+              run(commandIn,{
+                echoCommand: false,
+                captureOutput: false
+              })
             } else {
               if (nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
                 commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-                console.log(2, commandIn);
-                // run(commandIn,{
-                //   echoCommand: false,
-                //   captureOutput: false
-                // })
+                // console.log(2, commandIn);
+                run(commandIn,{
+                  echoCommand: false,
+                  captureOutput: false
+                })
               } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
                 commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-                console.log(3, commandIn);
-                // run(commandIn,{
-                //   echoCommand: false,
-                //   captureOutput: false
-                // })
+                // console.log(3, commandIn);
+                run(commandIn,{
+                  echoCommand: false,
+                  captureOutput: false
+                })
               } else {
                 // console.log('else');
               }
