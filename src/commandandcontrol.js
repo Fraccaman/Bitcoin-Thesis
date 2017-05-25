@@ -627,7 +627,7 @@ prog
         while (!(await allNodesAreTxSynched()) && index < 12) {
           console.log('Synchronizing ... cya @ 15')
           sleep.sleep(15)
-          ++index
+            ++index
         }
       } catch (err) {
         console.log('err', err);
@@ -806,7 +806,7 @@ async function setLatencies() {
   const nodes = await getAllNodes()
   let matrix = []
 
-  let check = false
+  let check = true
 
   csv()
     .fromFile(latencyMatrixPath)
@@ -818,49 +818,106 @@ async function setLatencies() {
       matrix.push(obj)
     })
     .on('done', (error) => {
-      for (var i = 0; i < nodes.length; i++) {
-        let lat;
-        for (country of matrix) {
-          if (Object.keys(country)[0] == nodes[i].zone) {
-            lat = Object.values(country)
+        for (var i = 0; i < nodes.length; i++) {
+          let lat;
+          for (country of matrix) {
+            if (Object.keys(country)[0] == nodes[i].zone) {
+              lat = Object.values(country)
+            }
           }
-        }
-        for (var j = 0; j < nodes.length; j++) {
-          if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown') {
-            let command;
-            if (nodes[j].zone == 'Unknown') {
-              command = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + (check == true) ? '' : '--add'
-              // run(command,{
+          for (var j = 0; j < nodes.length; j++) {
+            let commandIn;
+            let commandOut;
+            if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown' && nodes[j].zone != 'Unknown') {
+              // console.log(nodes[i].zone);
+              commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
+              console.log(1,commandIn);
+              // run(commandIn,{
               //   echoCommand: false,
               //   captureOutput: false
-              // }).then(() => console.log(i))
-              console.log(1, command);
-            }
-            else {
-              if(Math.floor(lat[0][nodes[j].zone]) != 0) {
-                command = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
-                // run(command,{
+              // })
+            } else {
+              if (nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
+                commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
+                console.log(2, commandIn);
+                // run(commandIn,{
                 //   echoCommand: false,
                 //   captureOutput: false
-                // }).then(() => console.log(i))
-                console.log(2, command);
+                // })
+              } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
+                commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
+                console.log(3, commandIn);
+                // run(commandIn,{
+                //   echoCommand: false,
+                //   captureOutput: false
+                // })
+              } else {
+                // console.log('else');
               }
-            }
-          } else {
-            if(nodes[i].port != nodes[j].port) {
-              let a = Math.floor(Math.random() * (500 - 0) + 0)
-              let command = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
-              console.log(3, command);
-              // run(command,{
-              //   echoCommand: false,
-              //   captureOutput: false
-              // }).then(() => console.log(i))
+              check = false
             }
           }
         }
-        check = true
-        console.log('Done ' + nodes[i].port);
-      }
+
+
+
+      // for (var j = 0; j < nodes.length; j++) {
+      //   let commandIn;
+      //   let commandOut;
+      //   if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown' && nodes[j].zone != 'Unknown') {
+      //     console.log(nodes[i].zone);
+      //     commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
+      //     console.log(commandIn);
+      //     // run(commandIn,{
+      //     //   echoCommand: false,
+      //     //   captureOutput: false
+      //     // })
+      //   }
+      //   else {
+      //     if(nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
+      //       commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
+      //       console.log(commandIn);
+      //       // run(commandIn,{
+      //       //   echoCommand: false,
+      //       //   captureOutput: false
+      //       // })
+      //     } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
+      //       commandIn = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
+      //       console.log(commandIn);
+      //       // run(commandIn,{
+      //       //   echoCommand: false,
+      //       //   captureOutput: false
+      //       // })
+      //     } else {
+      //       // console.log('else');
+      //     }
+      //         if(Math.floor(lat[0][nodes[j].zone]) != 0) {
+      //           command = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + Math.floor(lat[0][nodes[j].zone]) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
+      // //           // run(command,{
+      // //           //   echoCommand: false,
+      // //           //   captureOutput: false
+      // //           // }).then(() => console.log(i))
+      //           console.log(2, command);
+      //         }
+      //     }
+      //   }
+      //   check = false;
+      // }
+      //     } else {
+      //       if(nodes[i].port != nodes[j].port) {
+      //         let a = Math.floor(Math.random() * (500 - 0) + 0)
+      //         let command = 'sudo tcset --device lo --network 127.0.0.1 --delay ' + a + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 --add'
+      //         console.log(3, command);
+      //         // run(command,{
+      //         //   echoCommand: false,
+      //         //   captureOutput: false
+      //         // }).then(() => console.log(i))
+      //       }
+      //     }
+      //   }
+      //   check = true
+      //   console.log('Done ' + nodes[i].port);
+      // })
     })
 }
 
@@ -1003,7 +1060,7 @@ async function getTransactionByTxId(txId) {
 }
 
 function debug(key, value) {
-    console.log(key + ': ' + value);
+  console.log(key + ': ' + value);
 }
 
 function getMaxSize(mempool) {
