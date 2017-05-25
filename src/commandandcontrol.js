@@ -726,7 +726,7 @@ async function setupAnalysisEnvironment() {
 }
 
 async function setLatencyBeforeBlock() {
-  return new Promise(resolve, reject) {
+  return new Promise(function(resolve, reject) {
     const home = os.homedir()
 
     lr = new LineByLineReader(home + '/Bitcoin-Thesis/json.json')
@@ -749,8 +749,8 @@ async function setLatencyBeforeBlock() {
 
     lr.on('end', function() {
         return resolve()
-    }
-  }
+    })
+  })
 }
 
 function unsetLatencyBeforeBlock() {
