@@ -831,7 +831,7 @@ async function setLatencies() {
             if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown' && nodes[j].zone != 'Unknown') {
               // console.log(nodes[i].zone);
               commandIn = 'sudo tcset --device lo --delay ' + Math.floor(lat[0][nodes[j].zone] + 1)  + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-              // console.log(1,commandIn);
+              console.log(1,commandIn);
               // run(commandIn,{
               //   echoCommand: false,
               //   captureOutput: true
@@ -839,14 +839,14 @@ async function setLatencies() {
             } else {
               if (nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
                 commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-                // console.log(2, commandIn);
+                console.log(2, commandIn);
                 // run(commandIn, {
                 //   echoCommand: false,
                 //   captureOutput: true
                 // }).then(res => JSON.stringify('2', res.stdout))
               } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
                 commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
-                // console.log(3, commandIn);
+                console.log(3, commandIn);
                 // run(commandIn,{
                 //   echoCommand: false,
                 //   captureOutput: true
