@@ -835,7 +835,7 @@ async function setLatencies() {
               run(commandIn,{
                 echoCommand: false,
                 captureOutput: true
-              })
+              }).then(res => JSON.stringify('1', res.stdout))
             } else {
               if (nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
                 commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
@@ -843,14 +843,14 @@ async function setLatencies() {
                 run(commandIn,{
                   echoCommand: false,
                   captureOutput: true
-                })
+                }).then(res => JSON.stringify('2', res.stdout))
               } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
                 commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
                 // console.log(3, commandIn);
                 run(commandIn,{
                   echoCommand: false,
                   captureOutput: true
-                })
+                }).then(res => JSON.stringify('3', res.stdout))
               } else {
                 // console.log('else');
               }
