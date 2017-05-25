@@ -738,6 +738,8 @@ function setLatencyBeforeBlock() {
 
   lr.on('line', function(line) {
 
+    console.log(line);
+
     run(line,{
       echoCommand: false,
       captureOutput: true
