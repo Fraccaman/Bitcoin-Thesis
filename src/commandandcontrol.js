@@ -717,7 +717,7 @@ async function setLatencyBeforeBlock() {
 
     lr.on('line', async function(line) {
 
-      await run(line,{
+      run(line,{
         echoCommand: false,
         captureOutput: true
       })
