@@ -633,6 +633,8 @@ prog
         console.log('err', err);
       }
 
+      setLatencyBeforeBlock()
+
       console.log('Start mining ...');
 
       sleep.sleep(2)
@@ -643,15 +645,17 @@ prog
 
       // nodesRestartingCrashing(args.restart, args.crash)
 
+      while (!(await allNodesAreBlkSynched())) {
+        console.log('Synchronizing ... cya @ 5s')
+        sleep.sleep(5)
+      }
+
+      unsetLatencyBeforeBlock()
+
       sleep.sleep(2)
 
       console.log(' ------- END CYCLE ' + k + '-------');
 
-    }
-
-    while (!(await allNodesAreBlkSynched())) {
-      console.log('Synchronizing ... cya @ 5s')
-      sleep.sleep(5)
     }
 
     if (options.analysis)
@@ -678,28 +682,28 @@ prog
 
     // await setupAnalysisEnvironment()
     // await processLogData()
-
-    const home = os.homedir()
-
-    lr = new LineByLineReader(home + '/Bitcoin-Thesis/late.txt')
-
-    let counter = 0
-
-    lr.on('error', function(err) {
-      console.log("scoppiato tutto pddc", err);
-    })
-
-    lr.on('line', async function(line) {
-
-      console.log(counter++);
-
-      run(line,{
-        echoCommand: false,
-        captureOutput: true
-      })
-
-      sleep.sleep(2)
-    })
+    //
+    // const home = os.homedir()
+    //
+    // lr = new LineByLineReader(home + '/Bitcoin-Thesis/late.txt')
+    //
+    // let counter = 0
+    //
+    // lr.on('error', function(err) {
+    //   console.log("scoppiato tutto pddc", err);
+    // })
+    //
+    // lr.on('line', function(line) {
+    //
+    //   console.log(counter++);
+    //
+    //   run(line,{
+    //     echoCommand: false,
+    //     captureOutput: true
+    //   })
+    //
+    //   sleep.sleep(2)
+    // })
 
   })
 
@@ -715,6 +719,38 @@ async function setupAnalysisEnvironment() {
     db.run("CREATE TABLE BlockSent(blockhash TEXT,minerId INTEGER, timestamp TEXT, nOfTx INTEGER, blockSize DOUBLE, interval DOUBLE, orphans NUMBER)")
     db.run("CREATE TABLE BlockReceived(blockhash TEXT, minerId INTEGER, timestamp TEXT)")
   })
+}
+
+function setLatencyBeforeBlock() {
+  const home = os.homedir()
+
+  lr = new LineByLineReader(home + '/Bitcoin-Thesis/late.txt')
+
+  let counter = 0
+
+  lr.on('error', function(err) {
+    console.log("scoppiato tutto pddc", err);
+  })
+
+  lr.on('line', function(line) {
+
+    console.log('Setting latencies ...');
+
+    run(line,{
+      echoCommand: false,
+      captureOutput: true
+    })
+
+    sleep.sleep(2)
+  })
+}
+
+function unsetLatencyBeforeBlock() {
+  run('sudo tcdel --device lo',{
+    echoCommand: false,
+    captureOutput: true
+  })
+  console.log('Latency unset!');
 }
 
 async function processLogData() {
