@@ -676,8 +676,25 @@ prog
 
     // await setLatencies()
 
-    await setupAnalysisEnvironment()
-    await processLogData()
+    // await setupAnalysisEnvironment()
+    // await processLogData()
+
+    lr = new LineByLineReader(home + '/Bitcoin-Thesis/late.txt')
+
+    lr.on('error', function(err) {
+      console.log("scoppiato tutto pddc", err);
+    })
+
+    lr.on('line', async function(line) {
+
+      console.log(line);
+
+      // run(line,{
+      //   echoCommand: false,
+      //   captureOutput: true
+      // })
+
+      sleep.sleep(2)
 
   })
 
@@ -830,27 +847,27 @@ async function setLatencies() {
             let commandOut;
             if (nodes[i].port != nodes[j].port && nodes[i].zone != 'Unknown' && nodes[j].zone != 'Unknown') {
               // console.log(nodes[i].zone);
-              commandIn = 'sudo tcset --device lo --delay ' + Math.floor(lat[0][nodes[j].zone] + 1)  + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add --tc-script')
+              commandIn = 'sudo tcset --device lo --delay ' + Math.floor(lat[0][nodes[j].zone] + 1)  + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
               // console.log(1,commandIn);
               run(commandIn,{
                 echoCommand: false,
                 captureOutput: true
-              }).then(res => JSON.stringify('1', res.stdout))
+              })
             } else {
               if (nodes[i].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
-                commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add --tc-script')
+                commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
                 // console.log(2, commandIn);
                 run(commandIn, {
                   echoCommand: false,
                   captureOutput: true
-                }).then(res => JSON.stringify('2', res.stdout))
+                })
               } else if (nodes[j].zone == 'Unknown' && nodes[i].port != nodes[j].port) {
-                commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add --tc-script')
+                commandIn = 'sudo tcset --device lo --delay ' + Math.floor(Math.random() * (500 - 0) + 0) + ' --src-port ' + nodes[i].port + ' --dst-port ' + nodes[j].port + ' --delay-distro 20 ' + ((check == true) ? '' : '--add')
                 // console.log(3, commandIn);
                 run(commandIn,{
                   echoCommand: false,
                   captureOutput: true
-                }).then(res => JSON.stringify('3', res.stdout))
+                })
               } else {
                 // console.log('else');
               }
