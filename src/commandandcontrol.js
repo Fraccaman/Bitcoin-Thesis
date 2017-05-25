@@ -654,7 +654,7 @@ prog
 
       console.log('Unsetting latencies ...')
 
-      unsetLatencyBeforeBlock()
+      await unsetLatencyBeforeBlock()
 
       sleep.sleep(2)
 
@@ -725,28 +725,32 @@ async function setupAnalysisEnvironment() {
   })
 }
 
-function setLatencyBeforeBlock() {
-  const home = os.homedir()
+async function setLatencyBeforeBlock() {
+  return new Promise(resolve, reject) {
+    const home = os.homedir()
 
-  lr = new LineByLineReader(home + '/Bitcoin-Thesis/json.json')
+    lr = new LineByLineReader(home + '/Bitcoin-Thesis/json.json')
 
-  let counter = 0
+    let counter = 0
 
-  lr.on('error', function(err) {
-    console.log("scoppiato tutto pddc", err);
-  })
-
-  lr.on('line', function(line) {
-
-    console.log(line);
-
-    run(line,{
-      echoCommand: false,
-      captureOutput: true
+    lr.on('error', function(err) {
+      return reject('scoppiato tutto pddc')
     })
 
-    sleep.sleep(2)
-  })
+    lr.on('line', function(line) {
+
+      run(line,{
+        echoCommand: false,
+        captureOutput: true
+      })
+
+      sleep.sleep(2)
+    })
+
+    lr.on('end', function() {
+        return resolve()
+    }
+  }
 }
 
 function unsetLatencyBeforeBlock() {
