@@ -12,6 +12,8 @@ const csv = require('csvtojson')
 const WeightedList = require('js-weighted-list')
 const sleep = require('sleep')
 var loader = require('csv-load-sync')
+const path = require('path')
+const LineByLineReader = require('line-by-line')
 
 let db = new sqlite3.cached.Database('nodes.sqlite')
 let sum = 0;
@@ -105,6 +107,7 @@ prog
         var fData = list.map(function(item) {
           return [item.field1, Math.ceil(item.field2)]
         })
+        console.log(fData);
         let test = new WeightedList(fData)
         let promises = []
         for (let i = 0; i < args.nodes; i++) {
@@ -119,7 +122,56 @@ prog
           .catch(res => console.log(res))
       })
 
-  });
+  })
+  .command('data', 'get data')
+  .action(function(args, options, logger) {
+    let nodesinfo = {}
+    const dirs = fs.readdirSync(home + '/Network/Nodes').filter(file => fs.lstatSync(path.join(home + '/Network/Nodes', file)).isDirectory())
+    for (var i = 0; i < dirs.length; i++) {
+      nodesinfo[19500 + i] = []
+    }
+    let counter = 0
+    for (let i = 0; i < dirs.length; i++) {
+      lr = new LineByLineReader(home + '/Network/Nodes/' + dirs[i] + '/bitcoin.conf')
+
+      lr.on('error', function(err) {
+        console.log("scoppiato tutto pddc", err);
+      })
+
+      lr.on('line', function(line) {
+        if (line.includes('connect=')) {
+          nodesinfo[parseInt(line.split('=')[1].split(':')[1])].push(12600 + i)
+        }
+      })
+
+      lr.on('end', function() {
+        if (counter == (dirs.length -1)) {
+          if (fs.existsSync(home + "/testino.csv")) fs.unlinkSync(home + "/testino.csv");
+          fs.appendFileSync(home + "/testino.csv", 0 + ', ' + 0 + "\n");
+          for (var i = 0; i < Object.keys(nodesinfo).length; i++) {
+            fs.appendFileSync(home + "/testino.csv", i + ', ' + nodesinfo[Object.keys(nodesinfo)[i]].length + "\n");
+          }
+        } else {
+          counter++
+        }
+      });
+    }
+    let distr = {}
+    if (fs.existsSync(home + "/testino2.csv")) fs.unlinkSync(home + "/testino2.csv");
+    getAllNodes().then(res => {
+      for (node of res) {
+        if(distr[node.zone])
+          distr[node.zone] += 1
+        else {
+          distr[node.zone] = 1
+        }
+      }
+      fs.appendFileSync(home + "/testino2.csv", 0 + ', ' + 0 + "\n");
+      for (var i = 0; i < Object.keys(distr).length; i++) {
+        fs.appendFileSync(home + "/testino2.csv", Object.keys(distr)[i] + ', ' + distr[Object.keys(distr)[i]] + "\n");
+      }
+    })
+  })
 
 
 // Create a new node (Directory and config)
@@ -179,6 +231,16 @@ function createConfig(path, id, options, node, probabilities, zone) {
   }
   stmt.finalize()
   writer.end()
+}
+
+function getAllNodes() {
+  return new Promise(function(resolve, reject) {
+    db.all('SELECT * FROM Node', function(err, res) {
+      if (err)
+        return reject(err)
+      resolve(res)
+    })
+  })
 }
 
 // Custom field generation
