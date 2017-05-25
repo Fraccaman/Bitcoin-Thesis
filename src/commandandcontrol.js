@@ -626,9 +626,9 @@ prog
 
       let index = 0
       try {
-        while (!(await allNodesAreTxSynched()) && index < 12) {
+        while (!(await allNodesAreTxSynched()) && index < 8) {
           console.log('Synchronizing ... cya @ 15')
-          sleep.sleep(20)
+          sleep.sleep(15)
             ++index
         }
       } catch (err) {
@@ -745,16 +745,11 @@ async function processLogData() {
 }
 
 async function saveData(node) {
-
-  console.log('is in 1');
-
   let copySizes = blockSizes.slice()
   let copyInterval = intervals.slice()
   const pathToNetwork = os.homedir() + '/Network/Nodes'
   lr = new LineByLineReader(pathToNetwork + '/' + node.id + '/debug.log')
   let hashes = []
-
-  console.log('is in 2');
 
   lr.on('error', function(err) {
     console.log("scoppiato tutto pddc", err);
@@ -763,7 +758,6 @@ async function saveData(node) {
   lr.on('line', async function(line) {
 
     if (line.includes('Successfully reconstructed block')) {
-      console.log('reconstructed 1');
       let first = line.split(' ')[0] + ' '
       let second = line.split(' ')[1]
       const timestamp = first.concat(second)
@@ -772,11 +766,9 @@ async function saveData(node) {
         hashes.push(hash)
         newBlockIsArrived(hash, node.id, timestamp)
       }
-      console.log('reconstructed 2');
     }
 
     if (line.includes('Requesting block')) {
-      console.log('requesting 1');
       let first = line.split(' ')[0] + ' '
       let second = line.split(' ')[1]
       const timestamp = first.concat(second)
@@ -785,11 +777,9 @@ async function saveData(node) {
         hashes.push(hash)
         newBlockIsArrived(hash, node.id, timestamp)
       }
-      console.log('requesting 2');
     }
 
     if (line.includes('New Block has been mined: ')) {
-      console.log('mined 1');
       nextLine = false
       let first = line.split(' ')[0] + ' '
       let second = line.split(' ')[1]
@@ -798,7 +788,6 @@ async function saveData(node) {
       const hash = line.split(' ')[7]
       const res = await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getblock', hash)
       newBlockIsSent(hash, node.id, timestamp, res.data.result.tx.length, copySizes.shift(), copyInterval.shift(), orph.shift())
-      console.log('mined 2');
     }
 
   })
