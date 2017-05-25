@@ -679,6 +679,8 @@ prog
     // await setupAnalysisEnvironment()
     // await processLogData()
 
+    const home = os.homedir()
+
     lr = new LineByLineReader(home + '/Bitcoin-Thesis/late.txt')
 
     lr.on('error', function(err) {
