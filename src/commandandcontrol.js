@@ -487,10 +487,12 @@ prog
       const coinbaseNextBlock = coinbases.shift()
       debug('coinbase', coinbaseNextBlock.address)
 
+      let index = 0
       try {
-        while (!(await allNodesAreTxSynched())) {
+        while (!(await allNodesAreTxSynched()) && index < 8) {
           console.log('Synchronizing ... cya @ 15')
           sleep.sleep(15)
+            ++index
         }
       } catch (err) {
         console.log('err', err);
