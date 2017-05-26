@@ -100,8 +100,9 @@ def copytree2(src, dst, symlinks=False, ignore=[]):
 
 def removeAndCopy(path):
   print("Starting copy of " + str(path))
-  backup = os.path.expanduser("~") + '/../bitcoinbackup/bitcoin/'
+  backup = os.path.expanduser("~") + '/../bitcoinbackup/bitcoin2/0/'
   # backup = os.path.expanduser("~") + '/test/0/'
+  # backup = os.path.expanduser("~") + '/backupbb/bitcoin/'
   # backup_zip = os.path.expanduser("~") + '/test/0/Archive.zip'
 
   for the_file in os.listdir(path):
