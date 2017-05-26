@@ -584,7 +584,6 @@ prog
 
     let coinbases = []
     let nextHeight = args.height || await getNextHeight()
-    // let nextHeight = 398503
 
     debug('nextHeight', nextHeight)
     debug('args.nOfBlocks', args.nOfBlocks)
@@ -623,10 +622,12 @@ prog
         for (var i = 0; i < fullTxList.length; i++) {
           try {
             // TODO: check if OP_EQUALVERIFY
+            console.log(fullTxList[i].hash)
             await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', fullTxList[i].hex)
           } catch (e) {
             // debug('Error:', e)
           }
+          console.log('-----');
         }
 
         try {
@@ -649,7 +650,7 @@ prog
 
       let index = 0
       try {
-        while (!(await allNodesAreTxSynched()) && index < 8) {
+        while (!(await allNodesAreTxSynched()) && index < 15) {
           console.log('Synchronizing ... cya @ 15')
           sleep.sleep(15)
             ++index
