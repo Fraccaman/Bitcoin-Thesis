@@ -306,6 +306,25 @@ prog
       .catch(res => console.log(res))
   })
 
+  .command('sendtxhash', 'Send a transaction via RPC from a node by hash')
+  .argument('<node>', 'Node ID', prog.INT)
+  .argument('<hash>', 'hash')
+  .action(async function(args, options, logger) {
+    const master = await getMasterInfo()
+    const node = await sendQuery('SELECT * FROM Node WHERE id = 0')
+    getNodeInfo(args.node)
+      .then(res => {
+        sendRpcRequest(master.ip, master.rpcport, master.rpcusername, master.rpcpassword, 'getrawtransaction', args.hash, true)
+          .then(res => {
+            sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', res.data.result.hex).then(res => console.log('asd'))
+          })
+          .catch(err => {
+            console.log('Error: ' + err);
+          })
+      })
+      .catch(res => console.log(res))
+  })
+
   /**
    * Send a command to mine the next block.
    * @param {Int} node - optional paramter to choose the node that will mine the block
@@ -565,6 +584,7 @@ prog
 
     let coinbases = []
     let nextHeight = args.height || await getNextHeight()
+    // let nextHeight = 398503
 
     debug('nextHeight', nextHeight)
     debug('args.nOfBlocks', args.nOfBlocks)
@@ -602,9 +622,10 @@ prog
 
         for (var i = 0; i < fullTxList.length; i++) {
           try {
+            // TODO: check if OP_EQUALVERIFY
             await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', fullTxList[i].hex)
           } catch (e) {
-            debug('Error:', e)
+            // debug('Error:', e)
           }
         }
 
@@ -953,7 +974,7 @@ async function allNodesAreTxSynched() {
   } catch (err) {
     console.log('allNodesAreTxSynched', err);
   }
-  return res.every(x => Object.is(res[0].size, x.size))
+  return res.every(x => x.size >= res[0].size)
 }
 
 async function allNodesAreBlkSynched() {
