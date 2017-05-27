@@ -307,7 +307,6 @@ prog
   })
 
   .command('sendtxhash', 'Send a transaction via RPC from a node by hash')
-  .argument('<node>', 'Node ID', prog.INT)
   .argument('<hash>', 'hash')
   .action(async function(args, options, logger) {
     const master = await getMasterInfo()
@@ -969,13 +968,16 @@ async function allNodesAreTxSynched() {
     // console.log('MAYBE ERROR:', '127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo')
     promises.push(sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'getmempoolinfo'))
   }
+  const nodeZero = await sendQuery('SELECT * FROM Node WHERE id = 0')
+  const nodeZeroMempool = await sendRpcRequest('127.0.0.1', nodeZero.rpcport, nodeZero.rpcusername, nodeZero.rpcpassword, 'getmempoolinfo')
+
   let res;
   try {
     res = (await Promise.all(promises)).map(e => e.data.result)
   } catch (err) {
     console.log('allNodesAreTxSynched', err);
   }
-  return res.every(x => x.size >= res[0].size)
+  return res.every(x => x.size >= nodeZeroMempool.data.result.size)
 }
 
 async function allNodesAreBlkSynched() {
