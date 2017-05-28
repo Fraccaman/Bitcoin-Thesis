@@ -621,7 +621,7 @@ prog
         for (var i = 0; i < fullTxList.length; i++) {
           try {
             // TODO: check if OP_EQUALVERIFY
-            console.log(fullTxList[i].hash)
+            // console.log(fullTxList[i].hash)
             await sendRpcRequest('127.0.0.1', node.rpcport, node.rpcusername, node.rpcpassword, 'sendrawtransaction', fullTxList[i].hex)
           } catch (e) {
             // debug('Error:', e)
