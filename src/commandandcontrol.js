@@ -649,7 +649,7 @@ prog
 
       let index = 0
       try {
-        while (!(await allNodesAreTxSynched()) && index < 20) {
+        while (!(await allNodesAreTxSynched()) && index < 40) {
           console.log('Synchronizing ... cya @ 15')
           sleep.sleep(15)
             ++index
