@@ -677,22 +677,14 @@ prog
         sleep.sleep(5)
       }
 
-      // console.log('Unsetting latencies ...')
-
-      // unsetLatencyBeforeBlock()
-
       sleep.sleep(2)
 
       console.log(' ------- END CYCLE ' + k + '-------');
 
     }
 
-    // unsetLatencyBeforeBlock()
-
     if (options.analysis)
       await processLogData()
-
-    // process.exit()
 
   })
 
@@ -1070,7 +1062,7 @@ async function getTransactionByTxId(txId) {
 }
 
 function debug(key, value) {
-  console.log(key + ': ' + value);
+  if(false) console.log(key + ': ' + value);
 }
 
 function getMaxSize(mempool) {
