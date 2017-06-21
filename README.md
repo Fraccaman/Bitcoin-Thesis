@@ -25,6 +25,10 @@ Unfortunately, at the moment it can’t be used a replacement for those due to s
 5. Replace the generated bitcoind program in the executable folder.
 6. Download this repository.
 7. Run nodegenerator.js (--help to get the neccessary parameters)
+8. Download tcconfig (https://github.com/thombashi/tcconfig)
+9. If you want to insert latencies run ```./src/commandandcontrol.js latency > json.json``` and then ```./src/commandandcontrol.js test```
 8. Run resetter.py. You need to provide a path to a folder containing a valid main chain.
 9. Run commandandcontrol.js (--help to get the necessary paramters) to run the tests.
 10. Data are saved in a sqlite database.
+
+It's possibile to modify latencies, hash power and geographial distribution by modifing latencies.conf, nodes.conf and nodesDistribution.conf.
