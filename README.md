@@ -15,3 +15,16 @@ We will also be able to experiment with some real bitcoin trace, to be able to c
 ### Motivation
 > Bitcoin and blockchain are an emergent and wildly used technology with a different view in several aspects compared to other more traditional payment systems.
 Unfortunately, at the moment it can’t be used a replacement for those due to some issues related to the scalability of the protocol. So, in order to have a better understanding of this problems we are going to collect and analyze some data in order to comprehend where the system bottlenecks are.
+
+### Instruction
+> Follow the instruction to run testing:
+1. Download Bitcoin (https://bitcoin.org/it/scarica).
+2. Install Bitcoin core and change the executable name to bitcoinoriginal.
+3. Sync the blockchain with txindex = 1.
+4. Download and build a second instance of bitcoin from this url https://github.com/Fraccaman/bitcoin from 'setmaxblocksize' branch.
+5. Replace the generated bitcoind program in the executable folder.
+6. Download this repository.
+7. Run nodegenerator.js (--help to get the neccessary parameters)
+8. Run resetter.py. You need to provide a path to a folder containing a valid main chain.
+9. Run commandandcontrol.js (--help to get the necessary paramters) to run the tests.
+10. Data are saved in a sqlite database.
