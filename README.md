@@ -23,7 +23,7 @@ Unfortunately, at the moment it can’t be used a replacement for those due to s
 3. Sync the blockchain with txindex = 1.
 4. Download and build a second instance of bitcoin from this url https://github.com/Fraccaman/bitcoin from 'setmaxblocksize' branch.
 5. Replace the generated bitcoind program in the executable folder.
-6. Download this repository.
+6. Download this repository and change branch to feature/framework.
 7. Run ```nodegenerator.js``` (--help to get the neccessary parameters)
 8. Download tcconfig (https://github.com/thombashi/tcconfig)
 9. If you want to insert latencies run ```./src/commandandcontrol.js latency > json.json``` and then ```./src/commandandcontrol.js test```
